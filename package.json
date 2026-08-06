@@ -1,0 +1,8 @@
+{
+  "name": "scran",
+  "private": true,
+  "workspaces": ["server", "client"],
+  "scripts": {
+    "dev": "bun run --filter '*' dev"
+  }
+}

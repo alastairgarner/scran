@@ -51,6 +51,9 @@ point. But it is the reference implementation — steal its schema and its promp
 - [Lock scran's recipe schema](issues/03-recipe-schema.md) — **don't**. Store the model's JSON
   verbatim in one `recipes` table, `name` lifted out for the list view. Source photos retained
   permanently — the only irreplaceable data; everything else is one re-extraction script away.
+- [Scaffold the monorepo](issues/04-scaffold-monorepo.md) — built. Bun workspaces, `server/` (Hono
+  on :3000) + `client/` (Vite + React on :5173, `/api` proxied). `bun dev` runs both; the page
+  round-trips `GET /api/health`.
 
 ## Not yet specified
 
