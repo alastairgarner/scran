@@ -50,9 +50,15 @@ image import, and Mealie's prompt — which ticket 02 lifts — is written again
 output is table stakes across all providers, so switching later is a few lines. Gemini stays the
 runner-up if extraction quality disappoints on real books.
 
-Cost reference point: Gemini Pro was ~2.5¢/extraction (~75¢ for 30 recipes). Confirm OpenAI's
-actual per-extraction cost once the first real photos go through — it's the number that decides
-whether a cheaper model is worth stepping down to.
+Cost reference point: Gemini Pro was ~2.5¢/extraction (~75¢ for 30 recipes). **Measured in ticket
+05: ~$0.01 per extraction on `gpt-4.1`** — cheaper than the reference point, so no step down is
+warranted. `gpt-5` remains untested (org not ID-verified; it 403s on inference), so the model
+choice above is still unvalidated in practice.
+
+Ticket 05 also confirmed the predicted failure mode on real books: a VLM returns fluent, plausible,
+*wrong* text — invented sidebar prose, a quantity attached to the wrong ingredient. And it found
+one the research didn't predict: **a page shot 90° rotated degrades badly**, far worse than a
+curved spine or a two-column layout.
 
 Shape of the call: image as base64, a system prompt, and a JSON schema for the recipe type so a
 typed object comes back with no parsing step. Parse-and-validate anyway — schema-constrained

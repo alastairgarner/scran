@@ -33,5 +33,16 @@ Confirmed along the way: a ChatGPT/Codex subscription does **not** grant API acc
 signup at platform.openai.com, separate prepaid balance, billed per token; Codex credits don't
 spend against it.
 
-Still outstanding: record the actual per-extraction cost here after the first real photo goes
-through ticket 05. That number decides whether stepping down to a cheaper model is worth it.
+**Per-extraction cost, measured in ticket 05: ~$0.01** (`gpt-4.1`, ~2,000 prompt + ~400–800
+completion tokens, 3–7s). No reason to step down to a cheaper model — and `gpt-4o-mini` wasn't
+cheaper anyway: it billed 48,740 prompt tokens for a photo `gpt-4.1` billed 2,016 for. Compare
+image tokenisation, not headline per-token price.
+
+Two things the ticket didn't anticipate:
+
+- **Project model limits are separate from the key.** A key belongs to one project; allowing a
+  model on a *different* project does nothing. `/v1/models` lists org-level availability, so a
+  model can list and still 403 on inference. The error names the project id — match it to the
+  project whose Limits page you're editing.
+- **`gpt-5` needs org ID verification**, which is not done. It 403s on inference. `OPENAI_MODEL`
+  in `.env` overrides the model; the code still defaults to `gpt-5`.
