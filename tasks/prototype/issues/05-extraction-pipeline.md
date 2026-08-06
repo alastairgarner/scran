@@ -10,8 +10,9 @@ The core of the prototype, and the thing worth feeling early: upload a photo, ge
 
 - An endpoint that accepts an image upload
 - Calls the model chosen in ticket 01, using the prompt from ticket 02 as a starting point
-- Returns a recipe validated against the schema from ticket 03 — reject/surface anything that
-  doesn't fit rather than silently half-parsing
+- Returns whatever JSON the model produced, stored verbatim (ticket 03 — there is no schema to
+  validate against, and deliberately so). Save the photo alongside it; that's the one piece of
+  data that can't be regenerated.
 - The API key comes from the environment
 
 Then test it against real books off my own shelf, not clean screenshots. Note where it fails —

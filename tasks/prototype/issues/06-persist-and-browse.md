@@ -8,7 +8,8 @@ Blocked by: 03, 05
 
 Turn one-shot extraction into a catalogue.
 
-- Write extracted recipes to SQLite using the schema from ticket 03
+- Write extracted recipes to SQLite using the one-table layout from ticket 03 (`name` lifted out,
+  the model's JSON in `data`, photo path alongside)
 - A list view: every recipe I've captured
 - A detail view: ingredients and steps, readable on a phone held in a kitchen
 - Enough of a capture flow that adding a recipe is: take photo, upload, see it in the list
