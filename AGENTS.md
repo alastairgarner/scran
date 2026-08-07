@@ -1,5 +1,13 @@
 # scran
 
+## Before claiming work is done
+
+Run `bun run check` — Biome (lint + format) across the repo, then `tsc --noEmit` in both
+workspaces. `bun run fix` applies the safe fixes.
+
+A `pre-commit` hook in `.githooks/` runs the same checks over staged files and blocks the commit
+if they fail. `bun install` wires it up.
+
 ## Agent skills
 
 ### Issue tracker

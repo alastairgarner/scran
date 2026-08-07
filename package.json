@@ -1,8 +1,17 @@
 {
   "name": "scran",
   "private": true,
-  "workspaces": ["server", "client"],
+  "workspaces": [
+    "server",
+    "client"
+  ],
   "scripts": {
-    "dev": "bun run --filter '*' dev"
+    "dev": "bun run --filter '*' dev",
+    "check": "biome check . && bun run --filter '*' typecheck",
+    "fix": "biome check --write .",
+    "prepare": "git config core.hooksPath .githooks || true"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.5.7"
   }
 }

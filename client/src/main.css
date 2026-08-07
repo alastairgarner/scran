@@ -1,0 +1,107 @@
+/* Mobile-first, one column, big type — this gets read on a phone propped against a chopping board. */
+:root {
+  color-scheme: light dark;
+  font-family: system-ui, sans-serif;
+  font-size: 18px;
+  line-height: 1.6;
+}
+
+body {
+  margin: 0;
+}
+
+main {
+  max-width: 34rem;
+  margin: 0 auto;
+  padding: 1rem 1.25rem 4rem;
+}
+
+h1 {
+  font-size: 1.9rem;
+  line-height: 1.2;
+  margin: 0.5rem 0;
+}
+h2 {
+  font-size: 1.3rem;
+  margin: 2rem 0 0.5rem;
+}
+h3 {
+  font-size: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin: 1.25rem 0 0.25rem;
+  opacity: 0.7;
+}
+
+.muted {
+  opacity: 0.65;
+}
+.meta {
+  margin: 0 0 1rem;
+  font-weight: 600;
+}
+
+ul,
+ol {
+  padding-left: 1.4rem;
+  margin: 0;
+}
+li {
+  margin: 0.6rem 0;
+}
+ol li {
+  padding-left: 0.3rem;
+}
+
+/* Tap targets: nothing under ~44px high. */
+.capture,
+.back,
+.recipes button {
+  display: block;
+  width: 100%;
+  padding: 0.9rem 1rem;
+  font: inherit;
+  text-align: left;
+  border: 1px solid currentColor;
+  border-radius: 0.5rem;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+}
+
+.capture {
+  text-align: center;
+  font-weight: 600;
+  margin: 1rem 0;
+}
+/* Hidden but still focusable — display:none would drop it out of the tab order entirely. */
+.capture input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+.capture:focus-within {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
+.back {
+  width: auto;
+  border: none;
+  padding: 0.9rem 0;
+}
+
+.recipes {
+  list-style: none;
+  padding: 0;
+}
+.recipes li {
+  margin: 0.5rem 0;
+}
+.recipes button {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: baseline;
+}

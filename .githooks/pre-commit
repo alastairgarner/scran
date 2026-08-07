@@ -1,0 +1,11 @@
+#!/bin/sh
+set -e
+
+# Biome reads the staged set itself, so there is no lint-staged here and no dependency to install.
+# Check only, never --write: fixing during a commit would leave unstaged changes behind.
+bunx biome check --staged --no-errors-on-unmatched
+
+# tsc needs the whole program, so there is no meaningful "changed files only" typecheck. Both
+# workspaces together take about a second; when that stops being true, move this to CI as sn-web
+# does — its pre-commit lints and formats but does not typecheck.
+bun run --filter '*' typecheck

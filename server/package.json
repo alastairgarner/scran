@@ -2,7 +2,7 @@
   "name": "@scran/server",
   "private": true,
   "scripts": {
-    "dev": "bun --watch src/index.ts",
+    "dev": "bun --watch --env-file=../.env src/index.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
