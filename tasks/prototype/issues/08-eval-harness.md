@@ -1,8 +1,12 @@
 # An eval harness for extraction quality
 
 Type: task
-Status: open
+Status: out-of-scope
 Blocked by: 05
+
+**Out of scope for this map.** Measuring extraction quality over time is a build-the-product
+concern, not a "does this feel right on my laptop" one. The prototype's ground truth is a human
+reading the photo beside the JSON. Carry this ticket into the next map as-is.
 
 ## Question
 

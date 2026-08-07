@@ -60,6 +60,16 @@ point. But it is the reference implementation — steal its schema and its promp
   The failure list is in the ticket: rotation is the killer, prose fields get fabricated, and the
   author's headnote is always rewritten.
 
+- [Persist recipes and browse them](issues/06-persist-and-browse.md) — built and verified on a
+  phone-sized viewport against a live extraction. One `recipes` table in `data/scran.db`, list +
+  detail + capture, sectioned ingredients render correctly. Ticket 05's sidecar JSON is still
+  written alongside, for the `model`/`usage` metadata. **`bun dev` had never loaded the root
+  `.env`** — the documented entry point was broken until now.
+
+**The destination is reached.** Photograph a real page, see it in the catalogue, cook from it.
+
+**Successor**: [Rebuild scran properly](../rebuild/map.md) — carries the fog below that graduated.
+
 ## Not yet specified
 
 - **Deploying it.** Cheap public VPS, Docker stack. Reverse proxy, TLS, image storage on a box
@@ -86,13 +96,17 @@ point. But it is the reference implementation — steal its schema and its promp
   failure mode in the wild — fluent, plausible, wrong — including invented sidebar text and a
   quantity attached to the wrong ingredient, neither detectable without the photo beside you. So
   **a hand-edit path graduates**: "see the photo, fix the text" is the cheapest correction surface.
-  Measuring whether a fix helped is its own ticket:
-  [an eval harness](issues/08-eval-harness.md).
+  Measuring whether a fix helped is a separate concern, and one that belongs to the next map.
 
 ## Out of scope
 
 - **Meal planning / calendars.** Explicitly ruled out — Mealie territory, not wanted.
 - **Dedicated scanner hardware.** Flatbed or document-scanner integration. A phone photo is the
   capture surface; scanner support is a hardware integration, not this effort.
+- **[An eval harness for extraction quality](issues/08-eval-harness.md).** Photo + hand-written
+  expected JSON, a grader that set-diffs ingredients, and cached responses — so `gpt-4.1` vs
+  `gpt-5` and prompt A vs prompt B produce a diff rather than an opinion. Out of scope because
+  measuring quality over time is a build-the-product concern; the prototype's ground truth is a
+  human reading the photo beside the JSON. Ticket kept intact to carry into the next map.
 - **Self-hosting Mealie instead of building scran.** Considered and rejected during charting:
   building it is the point of the exercise.
