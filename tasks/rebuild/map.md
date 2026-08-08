@@ -21,21 +21,31 @@ anything about the stack, the schema, or the extraction pipeline.
 `task` tickets build things. Unlike the prototype map, the quality bar is **not** low — that is
 the entire point of this effort.
 
-**Rewrite in place.** Same repo, same git history, same `data/`. What survives verbatim:
-`server/src/prompts/`, the response schema in `extract.ts`, the photos on disk. Everything else
-is up for replacement.
+**Rewrite in place.** Same repo, same git history, same `data/`. The photos on disk survive
+untouched — they are the irreplaceable artifact. `server/src/prompts/` and the response schema in
+`extract.ts` survive as a *base*, not verbatim: ticket 04 restored scaling to scope, so both gain
+machine-readable quantities in [ticket 10](issues/10-machine-readable-quantities.md). Everything
+else is up for replacement.
+
+**The domain vocabulary lives in [CONTEXT.md](../../CONTEXT.md)** — source, extraction, version,
+edit, ingredient line, comment versus note, and the household's cross / tick / double tick rating
+scale. Read it before naming anything.
 
 **Settled during charting** (don't relitigate without a good reason):
 
 - **Stack survives**: Bun, Hono, Vite + React, SQLite. Add a router and a data layer client-side;
   keep the API boundary. No full-stack framework — SSR buys nothing behind a login.
-- **One shared catalogue.** Everyone sees every recipe. Per-user: **ratings** (individual, with a
-  surfaced cross-user average) and **notes** (shared, but authored — attributed to a person).
+- **One shared catalogue.** Everyone sees every recipe. Per-user: **ratings** (individual;
+  ticket 04 replaced the cross-user *average* with the **spread**, because averaging a cross away
+  destroys the one thing the scale is for) and **comments** (shared, but authored — attributed to a
+  person; *comment*, not note, since `notes` is the page's own).
 - **Invite-only, single-use invite links.** No email sending, no OAuth, no passwords. You generate
   a link, paste it into any chat. The invite list is the set of unredeemed tokens. Sessions roll on
   use so a device never silently logs out; a lost device means you issue another link.
 - **Full recipe versioning.** The model's original extraction is never destroyed by a human edit.
-  Append-only versions; **no history UI** until someone actually wrecks a recipe.
+  Append-only versions; **no history UI** until someone actually wrecks a recipe. Ticket 04 settled
+  the rest: current is the highest version, and **re-extraction does not exist** — once a recipe
+  has content, corrections are edits. Only *retry* of a failed first extraction survives.
 - **URL import keeps the same invariant** as photos: store the **raw HTML** permanently, so
   re-extraction stays cheap and every downstream decision stays reversible. Its own prompt.
 - **Testing**: unit tests on pure logic, integration tests against a **recorded** LLM response —
@@ -85,6 +95,16 @@ is up for replacement.
   message plus a greppable error id, never a stack. Photo saved and the row created **`pending`**
   before the LLM call, so a failure is retryable from disk — **an input to ticket 04.** pino to
   stdout, request id on every line.
+- [Lock the multi-user, versioned data model](issues/04-data-model.md) — **six tables beside Better
+  Auth's four**; versions append-only with **current = highest**, so no pointer and ticket 02's
+  trigger stands. Scalars lifted to columns, the three *lists* stay JSON — normalising them would
+  copy ~16 child rows per typo fix and buy nothing FTS doesn't already do. Extraction metadata are
+  columns on the version, so **`model IS NULL` means a person wrote it**; `createdByUserId` is
+  always set, because attribution and authorship are different facts. Sources are 0..N artifacts
+  (`photo|html`) — typed-in is *no* source row. Ratings per recipe on the household's **cross /
+  tick / double tick** scale, surfaced as a **spread, never a mean** (an average erases a veto).
+  Nothing hard-deleted; anyone edits, creator-only deletes. **Reversed two upstream calls**:
+  re-extraction is gone, and scaling is back in, so ingredients gain machine-readable quantities.
 - [Set up linting, formatting and typechecking](issues/08-lint-and-tooling.md) — Biome 2.5.7, one
   binary for lint + format + import sorting; `bun run check` also typechecks both workspaces.
   Configured to **match `~/forte/sn-web`'s house style** — 80 cols, single quotes, `type` over
@@ -94,16 +114,23 @@ is up for replacement.
 
 ## Not yet specified
 
-- **Hand-edit surface.** In scope, and the reason versioning exists — but what it *is* (edit the
-  fields? edit the JSON? photo beside the form?) waits on the data model and the design tokens.
+- **Hand-edit surface.** In scope, and the reason versioning exists. The data model no longer
+  blocks it — an edit appends a version, anyone may edit, `text` on an ingredient line is
+  sacred — so what's left is purely *what it looks like*, and that waits on ticket 06.
+- **Scaling.** Restored to scope by ticket 04; ticket 10 produces the quantities it needs. What
+  remains is the UI: a servings stepper where `yield_quantity` parsed, raw multiplier buttons
+  where it didn't, and a clear mark on every line that **can't** be scaled. A render-time
+  multiply over stored data — nothing more is persisted.
 - **Capture orientation fix.** In scope. The prototype's worst result by a distance was a page
   shot 90° rotated. Rotate before upload, or honour EXIF, or ask the model — cheap either way,
   but it's a build ticket that waits on the extraction module's new shape.
 - **URL import build.** Decided in principle (raw HTML, own prompt). The pipeline itself —
-  fetching, JSON-LD, what a URL-sourced recipe looks like in a photo-shaped UI — waits on the
-  data model.
+  fetching, JSON-LD, what a URL-sourced recipe looks like in a photo-shaped UI — no longer waits
+  on the data model: it is a `source` row with `kind = 'html'`, and everything downstream of that
+  is identical to a photo. It waits on the module shape in ticket 05.
 - **Search build.** The mechanism is settled (FTS5). What search *looks like* — the box, the
-  results, whether snippets are shown — waits on the data model and the design tokens.
+  results, whether snippets are shown — waits only on ticket 06 now; the index is one FTS5 table
+  keyed on `recipe.id`, fed by a trigger, and it drops rows whose `deletedAt` is set.
 - **Where photos live.** Settled for this effort: local disk on the box, bind-mounted into the
   container. Object storage (S3, MinIO) is a public-deploy concern, not a LAN one. The insurance
   that keeps it cheap belongs to ticket 05 — **one module owns photo paths**, so nothing else
@@ -111,10 +138,16 @@ is up for replacement.
 - **Docker.** The destination requires a `Dockerfile` and a compose file that run on the home
   server. **No Caddy** — see the Notes: there's no domain on the LAN, so there's nothing to
   terminate TLS for.
-- **Migrating the 7 existing recipes** into whatever schema the data model ticket lands on.
+- **Migrating the 7 existing recipes** into ticket 04's schema — one `recipe` + one model-authored
+  `recipeVersion` + one `photo` source each, with the sidecar JSON's `model`/usage folded into the
+  version row and then deleted. They gain quantities only by re-extraction, which
+  [ticket 10](issues/10-machine-readable-quantities.md) does; this is the one sanctioned
+  re-extraction, and it's only sanctioned because nobody has hand-edited anything yet.
 - **Env-driven cookie and URL config.** The one piece of the TLS story that *is* in scope: `Secure`
   off on the LAN, on in public, as a config value rather than a code change. Belongs to ticket 05.
-- **Rating and note UI.** Trivial once the data model is settled; not before.
+- **Rating and comment UI.** Semantics settled by ticket 04 — three-point cross / tick / double
+  tick, one per person, and the **spread** shown rather than an average. What's left is drawing it,
+  which waits on ticket 06. (It is *comment*, not note: `notes` is the page's own.)
 
 ## Out of scope
 
@@ -122,7 +155,9 @@ is up for replacement.
   server. A public deploy is a fresh effort.
 - **Tags.** Considered and cut during charting — search over name and ingredients answers the
   question people actually ask. Returns if search proves it needs them.
-- **Shopping lists and scaling.** Ruled out flatly.
+- **Shopping lists.** Ruled out flatly. (**Scaling was wrongly listed here** — the prototype map
+  *deferred* it, saying whichever of the two got built first is what forces ingredients to be
+  structured. Ticket 04 restored it to scope; it now lives in **Not yet specified**.)
 - **[An eval harness for extraction quality](../prototype/issues/08-eval-harness.md).** Carried
   from the prototype map and ruled out again: this effort's testing story is recorded-response
   fixtures. The gap is real — nothing here tells you a prompt change made extraction worse — and
