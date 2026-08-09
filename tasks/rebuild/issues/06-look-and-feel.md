@@ -108,9 +108,11 @@ confirmed by use, not by argument.
 
 - Panzanella carries a mangled ingredient line — `"2 tablespoons red wine chopped torn croutons
   (page 269)"`, two lines welded together by the extraction. Evidence for ticket 10's prompt work.
-- Biome's `noDuplicateCustomProperties` is a **false positive by construction** on the theme file:
-  defining a token in `:root` and again in `@theme inline` is exactly what ticket 03 mandates. It
-  needs disabling for `theme.css` before the real client is written.
+- **Biome could not parse the theme file**, and said so misleadingly: it reported
+  `noDuplicateCustomProperties` and `noUnknownTypeSelector` errors that looked like a rule fighting
+  ticket 03's architecture. Both were symptoms of `@theme` / `@custom-variant` being unparseable —
+  the fix is one line, `css.parser.tailwindDirectives: true`, **not** a rule override. Applied to
+  `biome.json` on the prototype branch; it needs to reach `main` with the real client.
 - Five recipes is a thin catalogue. Filters and density will read differently at fifty.
 - The catalogue FAB overlaps the last row's rating when the list is short enough not to scroll.
 

@@ -13,8 +13,10 @@ Ticket 05 fixed the client's *structure* — routes, `api/` hooks, `RequireAuth`
 Build the real client to ticket 06's answer. It replaces `client/src/main.tsx` wholesale.
 
 - **`theme.css`** as ticket 03 specifies — six sections, `@theme inline`, `--color-*: initial` — and
-  **disable Biome's `noDuplicateCustomProperties` for that file**: it is a false positive by
-  construction there, and it will fire on every build otherwise.
+  set **`css.parser.tailwindDirectives: true`** in `biome.json`. Without it Biome cannot parse
+  `@theme` or `@custom-variant` at all, and reports the failure as a pile of spurious
+  `noDuplicateCustomProperties` and `noUnknownTypeSelector` errors that look like a rule conflict.
+  It is one line, and no rule override is needed. Already done on the prototype branch.
 - **Screens**: catalogue (list, no thumbnails, bottom toolbar, filter & sort sheet), recipe (method
   with step rules, ingredients bottom sheet, servings stepper), capture (photo and URL), sign-in.
 - **Scaling** is render-time only, over stored data — nothing extra is persisted.
