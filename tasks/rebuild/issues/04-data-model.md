@@ -182,3 +182,26 @@ the quantity parsing got *better or worse* — that is the eval harness, still o
   yet. Seeded by hand at deploy; ticket 05's problem.
 - **The 7 existing recipes** carry no quantities and must be re-extracted from their photos to gain
   them. Part of the migration, still fog.
+
+## Amendment from [ticket 06](06-look-and-feel.md)
+
+Two of this ticket's conclusions were **deliberately overridden** once the UI existed to judge
+them. Both were the human's call, made with the trade-off stated.
+
+- **"Surfaced as a spread, never a mean — an average erases a veto."** The *never a mean* part
+  stands. The *spread* part does not: five sets of initials down a list column is noise. The
+  catalogue now shows a **single collapsed mark** — the **modal rating, ties rounding down** — over
+  a chosen scope. This **can hide a lone veto** (three ticks and one cross reads as a tick), and
+  that was accepted knowingly in exchange for a list that reads at a glance. Full per-person
+  attribution survives on the recipe page, which is one tap away. The minimum was tried and
+  rejected: it makes one grumpy rating indistinguishable from household-wide rejection.
+- **Ratings are per-user with no group.** Still true in the schema, but the catalogue scopes its
+  mark to **Everyone / Our house / Me**, and nothing here can answer what "our house" is. A
+  per-person picker would have needed no schema and was rejected as faff in use. Whether
+  `household` becomes a table is [ticket 20](20-households.md); it amends this model, and possibly
+  [ticket 01](01-auth-and-sessions.md)'s invites.
+- Unrelated, and confirming rather than overriding: the **stepper / multiplier split** above is
+  exactly what got built, and the "mark the line unscalable" invariant survived contact with real
+  data. See the amendment on [ticket 10](10-machine-readable-quantities.md) for what scaling still
+  owes — rounding must be unit-aware, and must never snap lines independently, because that drifts
+  the ratios between them.

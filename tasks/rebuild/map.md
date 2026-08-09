@@ -121,25 +121,38 @@ scale. Read it before naming anything.
   a global store is usually a hand-rolled server cache. The LLM seam is a defaulted parameter, so
   the recorded fixture needs no framework. Invites are a `bun run invite` command. **This ticket
   turned the map from decisions to build**: 11–17 are its tickets.
+- [What does scran look like?](issues/06-look-and-feel.md) — **an app, and a tool rather than a
+  document**, settled by building nine variants and cutting eight. Recipe screen: **method owns the
+  screen, ingredients in a bottom sheet** whose own lip opens it; step numbers sit *above* their
+  paragraph as a rule. Swipe panes were rejected — they collide with the OS back gesture on both
+  platforms. Catalogue: **name-first list, no thumbnails** (every photo is a photo of text), one
+  aggregate mark, thumb-anchored search + **filter & sort sheet**, `+` FAB, and **no tab bar** —
+  scran has one destination. Scaling: **stepper where the yield parsed, multipliers where it
+  didn't**, at **significant figures — never snapping**, because snapping lines independently
+  drifts the ratios. Ratings: a **collapsed modal mark, ties rounding down**, scoped Everyone /
+  Our house / Me — which **overrides ticket 04 on both counts** (a veto can now hide, and
+  "our house" needs a schema). Tags came back into scope. **Ticket 03's swap test passes**: two
+  skins plus dark, one file. Spawned tickets 18–21.
 
 ## Not yet specified
 
-- **Hand-edit surface.** In scope, and the reason versioning exists. The data model no longer
-  blocks it — an edit appends a version, anyone may edit, `text` on an ingredient line is
-  sacred — so what's left is purely *what it looks like*, and that waits on ticket 06.
-- **Scaling.** Restored to scope by ticket 04; ticket 10 produces the quantities it needs. What
-  remains is the UI: a servings stepper where `yield_quantity` parsed, raw multiplier buttons
-  where it didn't, and a clear mark on every line that **can't** be scaled. A render-time
-  multiply over stored data — nothing more is persisted.
-- **Search build.** The mechanism is settled (FTS5) and the server side is ticket 13's `?q=`. What
-  search *looks like* — the box, the results, whether snippets are shown — waits only on ticket 06
-  now.
-- **The client build itself.** Ticket 05 fixed the structure (routes, `api/` hooks, `RequireAuth`,
-  three state owners) but not a single screen. The other UI entries here are slices of it, and all
-  of them wait on ticket 06 — so how they're cut stays fog until there's something to look at.
-- **Rating and comment UI.** Semantics settled by ticket 04 — three-point cross / tick / double
-  tick, one per person, and the **spread** shown rather than an average. What's left is drawing it,
-  which waits on ticket 06. (It is *comment*, not note: `notes` is the page's own.)
+<!--
+  Ticket 06 cleared this section almost entirely: the hand-edit surface graduated to ticket 18,
+  the client build to ticket 21, and scaling, search and the rating/comment UI were all simply
+  answered by it. What's left is what that answer opened up.
+-->
+
+- **Whether tags ship with ticket 13 or after it.** [Ticket 19](issues/19-tags.md) changes the same
+  prompt and response schema as ticket 10, so the two probably land together — but that's a
+  sequencing call nobody has made, and it's the thing standing between "tags are decided" and
+  "tags are built".
+- **Backfilling tags onto the existing recipes.** Re-extraction over a recipe that already has
+  content is forbidden, so tags arrive by a separate cheap pass or not at all. Which, and whether
+  it's worth it for seven recipes, isn't sharp yet.
+- **What the catalogue feels like at fifty recipes.** Everything was judged against five. Density,
+  whether sort-by-recent stays the right default, and whether the filter sheet is reached often
+  enough to deserve its button are all open — and unanswerable until there's a real catalogue,
+  which means after ticket 17's migration.
 
 ## Out of scope
 
@@ -150,8 +163,11 @@ scale. Read it before naming anything.
   Object storage buys durability across machines and there is one machine. `storage.ts` is the
   insurance — it monopolises paths, so if a public deploy ever wants a bucket, that's one module.
   Backing up the `DATA_DIR` directory and the SQLite file belongs to [ticket 16](issues/16-docker.md).
-- **Tags.** Considered and cut during charting — search over name and ingredients answers the
-  question people actually ask. Returns if search proves it needs them.
+- ~~**Tags.**~~ **Back in scope**, as [ticket 19](issues/19-tags.md). Cut during charting on the
+  grounds that search answers the question people actually ask; ticket 06 showed it doesn't. FTS5
+  matches words that are *on the page*, so every categorical question — quick, veggie, midweek —
+  is invisible to it. Returns as a **closed vocabulary the model picks from**, because free-form
+  tags drift.
 - **Shopping lists.** Ruled out flatly. (**Scaling was wrongly listed here** — the prototype map
   *deferred* it, saying whichever of the two got built first is what forces ingredients to be
   structured. Ticket 04 restored it to scope; it now lives in **Not yet specified**.)

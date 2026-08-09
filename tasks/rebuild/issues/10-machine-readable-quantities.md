@@ -36,3 +36,22 @@ Two things to get right rather than discover:
 
 Done when the schema and prompt are updated, the recorded-response fixture is regenerated, and the
 7 recipes carry quantities — with the misses written down.
+
+## Amendment from [ticket 06](06-look-and-feel.md)
+
+Prototyping the scaling UI added one requirement and confirmed another:
+
+- **Cook-friendly rounding belongs here, not in the view, and it must be unit-aware.** Scaling to a
+  stepper value produces things like `1.22 egg` and `0.306 tsp. salt`. The obvious fix — snap each
+  line to a tidy fraction — is **wrong**: snapping lines independently drifts the *ratios* between
+  them, which for baking is a broken recipe. Correct rounding needs the unit (grams to the nearest
+  5, eggs to a whole, spoons to a quarter), which only exists once this ticket lands. Until then
+  the client shows significant figures, which is ugly and honest.
+- The "mark the line unscalable" requirement above is **confirmed by use** — the UI marks such
+  lines `(unscaled)` and it reads fine. But the prototype's crude `\bor\b` guard produced a false
+  positive on `1/3 c. melted butter **or** corn oil`, where the "or" offers an alternative
+  *ingredient*, not an alternative *quantity*. Worth getting right here rather than in the view.
+- Real evidence for the prompt work: Panzanella currently carries `"2 tablespoons red wine chopped
+  torn croutons (page 269)"` — two ingredient lines welded into one by the extraction.
+- [Ticket 19](19-tags.md) changes the same prompt and the same response schema. The two should
+  probably land together.
