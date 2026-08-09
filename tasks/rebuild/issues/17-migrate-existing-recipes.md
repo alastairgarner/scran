@@ -22,5 +22,11 @@ seven recipes can't be scaled.
 
 `createdByUserId` is `NOT NULL` on a version, so this runs after an account exists.
 
+**Two directories, and that's deliberate.** Ticket 11's `storage.ts` writes new artifacts to
+`DATA_DIR/sources/` keyed by source id, because sources are no longer all photos. The seven
+existing files stay in `DATA_DIR/photos/` under their original names. Either teach `storage.ts` to
+read a legacy key, or copy the seven across — but never move or rename the originals until the new
+copies are verified, and prefer copying to moving throughout.
+
 Done when the seven recipes read correctly in the new schema, their photos are unmoved, and the
 old table and sidecars are gone.

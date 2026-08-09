@@ -145,6 +145,11 @@ scale. Read it before naming anything.
 
 - **VPS, domain, TLS to the public internet, offsite backups.** The destination stops at the home
   server. A public deploy is a fresh effort.
+- **Object storage for sources (S3, MinIO).** Settled during charting and re-stated here after
+  ticket 05: sources live on **local disk**, under `DATA_DIR`, bind-mounted into the container.
+  Object storage buys durability across machines and there is one machine. `storage.ts` is the
+  insurance — it monopolises paths, so if a public deploy ever wants a bucket, that's one module.
+  Backing up the `DATA_DIR` directory and the SQLite file belongs to [ticket 16](issues/16-docker.md).
 - **Tags.** Considered and cut during charting — search over name and ingredients answers the
   question people actually ask. Returns if search proves it needs them.
 - **Shopping lists.** Ruled out flatly. (**Scaling was wrongly listed here** — the prototype map

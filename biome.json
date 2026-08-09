@@ -78,7 +78,20 @@
       "includes": ["client/**"],
       "linter": {
         "rules": {
-          "style": { "noDefaultExport": "off" }
+          "style": {
+            "noDefaultExport": "off",
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "paths": {
+                  "@scran/server": {
+                    "allowImportNames": ["AppType"],
+                    "message": "Only `import type { AppType }`. Importing a value from the server would put bun:sqlite in the browser bundle."
+                  }
+                }
+              }
+            }
+          }
         }
       }
     },

@@ -2,11 +2,13 @@
   "name": "scran",
   "private": true,
   "workspaces": [
+    "shared",
     "server",
     "client"
   ],
   "scripts": {
     "dev": "bun run --filter '*' dev",
+    "test": "bun test",
     "check": "biome check . && bun run --filter '*' typecheck",
     "fix": "biome check --write .",
     "prepare": "git config core.hooksPath .githooks || true"

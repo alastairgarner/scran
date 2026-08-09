@@ -7,6 +7,10 @@
     "jsx": "react-jsx",
     "strict": true,
     "skipLibCheck": true,
+    // A value import from @scran/server survives to runtime rather than being
+    // silently elided, so bun:sqlite would break the build instead of shipping
+    // to a phone. Biome's noRestrictedImports is the other half of that guard.
+    "verbatimModuleSyntax": true,
     "noEmit": true
   },
   "include": ["src", "vite.config.ts"]
