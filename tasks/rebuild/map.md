@@ -111,6 +111,16 @@ scale. Read it before naming anything.
   `interface`, no default exports on the server. A `PostToolUse` hook and VS Code format-on-save
   keep it applied. Typecheck is clean; the remaining lint findings are all in code the rewrite
   replaces. Bun is on 1.1.42 and wants upgrading before the rewrite.
+- [What shape does the rewritten codebase take](issues/05-architecture.md) — **three workspaces,
+  raw SQL, zod as the only schema language, and one deep `recipes.ts` holding every versioning
+  invariant.** `config.ts` parses env at boot and throws; nothing else reads `process.env`, which is
+  where `COOKIE_SECURE` and `DATA_DIR` land. `storage.ts` monopolises photo paths. Photo and URL
+  meet at `extract(source)` — two prompts, one schema, one write path. **Capture is asynchronous**:
+  202 + poll, plus a stale-pending sweep at boot. `shared/` holds the zod schemas, Hono RPC types
+  the calls. Three client state owners — Query, the URL, react-hook-form — and **no store**, because
+  a global store is usually a hand-rolled server cache. The LLM seam is a defaulted parameter, so
+  the recorded fixture needs no framework. Invites are a `bun run invite` command. **This ticket
+  turned the map from decisions to build**: 11–17 are its tickets.
 
 ## Not yet specified
 
@@ -121,30 +131,12 @@ scale. Read it before naming anything.
   remains is the UI: a servings stepper where `yield_quantity` parsed, raw multiplier buttons
   where it didn't, and a clear mark on every line that **can't** be scaled. A render-time
   multiply over stored data — nothing more is persisted.
-- **Capture orientation fix.** In scope. The prototype's worst result by a distance was a page
-  shot 90° rotated. Rotate before upload, or honour EXIF, or ask the model — cheap either way,
-  but it's a build ticket that waits on the extraction module's new shape.
-- **URL import build.** Decided in principle (raw HTML, own prompt). The pipeline itself —
-  fetching, JSON-LD, what a URL-sourced recipe looks like in a photo-shaped UI — no longer waits
-  on the data model: it is a `source` row with `kind = 'html'`, and everything downstream of that
-  is identical to a photo. It waits on the module shape in ticket 05.
-- **Search build.** The mechanism is settled (FTS5). What search *looks like* — the box, the
-  results, whether snippets are shown — waits only on ticket 06 now; the index is one FTS5 table
-  keyed on `recipe.id`, fed by a trigger, and it drops rows whose `deletedAt` is set.
-- **Where photos live.** Settled for this effort: local disk on the box, bind-mounted into the
-  container. Object storage (S3, MinIO) is a public-deploy concern, not a LAN one. The insurance
-  that keeps it cheap belongs to ticket 05 — **one module owns photo paths**, so nothing else
-  knows where bytes are. Backups of the photo directory and the SQLite file are also fog.
-- **Docker.** The destination requires a `Dockerfile` and a compose file that run on the home
-  server. **No Caddy** — see the Notes: there's no domain on the LAN, so there's nothing to
-  terminate TLS for.
-- **Migrating the 7 existing recipes** into ticket 04's schema — one `recipe` + one model-authored
-  `recipeVersion` + one `photo` source each, with the sidecar JSON's `model`/usage folded into the
-  version row and then deleted. They gain quantities only by re-extraction, which
-  [ticket 10](issues/10-machine-readable-quantities.md) does; this is the one sanctioned
-  re-extraction, and it's only sanctioned because nobody has hand-edited anything yet.
-- **Env-driven cookie and URL config.** The one piece of the TLS story that *is* in scope: `Secure`
-  off on the LAN, on in public, as a config value rather than a code change. Belongs to ticket 05.
+- **Search build.** The mechanism is settled (FTS5) and the server side is ticket 13's `?q=`. What
+  search *looks like* — the box, the results, whether snippets are shown — waits only on ticket 06
+  now.
+- **The client build itself.** Ticket 05 fixed the structure (routes, `api/` hooks, `RequireAuth`,
+  three state owners) but not a single screen. The other UI entries here are slices of it, and all
+  of them wait on ticket 06 — so how they're cut stays fog until there's something to look at.
 - **Rating and comment UI.** Semantics settled by ticket 04 — three-point cross / tick / double
   tick, one per person, and the **spread** shown rather than an average. What's left is drawing it,
   which waits on ticket 06. (It is *comment*, not note: `notes` is the page's own.)
