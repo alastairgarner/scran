@@ -179,3 +179,32 @@ Two known misses, neither worth another round:
   port.
 - **[15](15-capture-orientation.md)**: the Panzanella spread is a second, harder instance of the
   bug that ticket already exists for. Multi-column layout, not rotation.
+
+### Decoding, tested after the fact
+
+Prompted by a research summary of extraction best practice, three of whose recommendations this
+ticket had already implemented (schema-enforced output, per-field descriptions, an explicit
+missing-data rule) and one of which — worked examples — was declined, since the descriptions already
+carry examples at the point of use and `strict` schema enforcement reduces the need. Two were
+untested, so they were tested: three repeat runs each against Panzanella, the one photo that will
+not sit still.
+
+```
+arm                 line overlap   ingredient count   total_minutes   yield
+A  as-is                    17%    13 / 11 / 13       50 / 60 / 45    4 / 6 / 4
+B  image before text        11%    10 / 11 / 11       40 / 40 / 45    6 / 4 / 6
+C  temperature 0            37%    10 / 10 / 10       45 / 45 / 45    4 / 4 / 4
+```
+
+- **Image-before-text is worse, not better** — rejected. n=3, so this is weak evidence rather than a
+  refutation, but there is no reason to adopt it. Recorded so nobody re-tries it.
+- **`temperature: 0` is adopted**, and gpt-5 accepts it rather than rejecting it as some reasoning
+  models do. Confirmed across all four photos with no regression; the muffins even shed a spurious
+  `pudding` tag. The fixture is recorded at this setting.
+
+**The shape of that win is the finding, not the win itself.** Temperature 0 froze every *derived*
+field perfectly — count, yield, time, tags — while the verbatim `text` kept moving. Had the
+instability been sampling, it would have frozen the whole output. It froze the judgement and left
+the reading wobbling, which is direct evidence that Panzanella is a **perception** failure and not a
+prompt or decoding one. No wording and no decoding parameter fixes a two-column spread the model
+cannot resolve; that needs preprocessing, and it belongs to [ticket 15](15-capture-orientation.md).

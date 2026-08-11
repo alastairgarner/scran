@@ -186,7 +186,11 @@ scale. Read it before naming anything.
   `normaliseTags` are now in `shared/`. Evidence: 47 of 50 real ingredient lines scalable, the other
   3 correctly not, **no false positives**, fractions clean. Iterating found three prompt bugs,
   including one **this ticket caused** — the judge-a-duration carve-out leaked into verbatim
-  `totalTime` and had to be fenced. Four recorded responses are checked in for ticket 13.
+  `totalTime` and had to be fenced. Four recorded responses are checked in for ticket 13. Decoding
+  was then tested rather than assumed: **`temperature: 0` adopted**, image-before-text **rejected as
+  worse**. Temperature 0 froze every *derived* field while verbatim text kept moving — which proves
+  the one unstable photo is a **perception** failure, so it is [ticket 15](issues/15-capture-orientation.md)'s
+  and no prompt can fix it.
 
 ## Not yet specified
 

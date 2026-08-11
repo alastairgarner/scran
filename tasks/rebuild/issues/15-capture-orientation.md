@@ -34,3 +34,9 @@ So this ticket is really **"the model can't see the page properly"**, of which r
 cheap case. Whatever the fix is, judge it against the Panzanella photo as well as the rotated one,
 and treat a stable result across repeated runs as the bar — a single good extraction proves nothing
 here.
+
+Ticket 10 then narrowed it further by experiment: at `temperature: 0` every *derived* field on that
+photo went perfectly stable across repeats (count, yield, time, tags) while the verbatim ingredient
+text kept changing. Sampling was therefore never the cause — the model reads the page differently
+each time. **The fix is preprocessing** (crop, deskew, resolution, or splitting the columns before
+the call), not prompt wording and not decoding parameters. Both are already ruled out by evidence.

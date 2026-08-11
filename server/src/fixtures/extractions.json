@@ -3,10 +3,10 @@
     "model": "gpt-4.1",
     "usage": {
       "prompt_tokens": 2598,
-      "completion_tokens": 559,
-      "total_tokens": 3157,
+      "completion_tokens": 558,
+      "total_tokens": 3156,
       "prompt_tokens_details": {
-        "cached_tokens": 0,
+        "cached_tokens": 2432,
         "audio_tokens": 0
       },
       "completion_tokens_details": {
@@ -18,11 +18,11 @@
     },
     "recipe": {
       "name": "Chocolate Chip Muffins",
-      "description": "Simple muffins with chocolate chips. Includes variations with raspberries or cranberries. Makes a sweet dessert treat for chocolate lovers.",
+      "description": "Classic chocolate chip muffins with options for variations such as raspberries or cranberries. Simple to make and perfect for dessert or a snack.",
       "recipe_yield": "9 large muffins",
       "yield_quantity": 9,
       "yield_unit": "large muffins",
-      "total_time": "20 min",
+      "total_time": "20 min.",
       "prep_time": null,
       "perform_time": null,
       "total_minutes": 30,
@@ -30,7 +30,6 @@
       "tags": [
         "vegetarian",
         "baking",
-        "pudding",
         "snack"
       ],
       "ingredients": [
@@ -126,7 +125,7 @@
         },
         {
           "title": null,
-          "text": "Bake at 375°F for 20 min."
+          "text": "Bake at 375° for 20 minutes."
         },
         {
           "title": null,
@@ -136,7 +135,7 @@
       "notes": [
         {
           "title": null,
-          "text": "Variations: Substitute 1/2 packet chocolate chips and 100g frozen raspberries (chopped), or 1/2 cup dried cranberries."
+          "text": "You can substitute half the chocolate chips with 100g frozen raspberries (chopped) or use 1/2 cup dried cranberries for variation."
         }
       ]
     }
@@ -145,10 +144,10 @@
     "model": "gpt-4.1",
     "usage": {
       "prompt_tokens": 3278,
-      "completion_tokens": 1279,
-      "total_tokens": 4557,
+      "completion_tokens": 1291,
+      "total_tokens": 4569,
       "prompt_tokens_details": {
-        "cached_tokens": 1792,
+        "cached_tokens": 2944,
         "audio_tokens": 0
       },
       "completion_tokens_details": {
@@ -160,14 +159,14 @@
     },
     "recipe": {
       "name": "Greens & caramelised tofu with XO sauce",
-      "description": "A vibrant dish featuring caramelised tofu, greens, and a homemade XO sauce. Makes a delicious and hearty vegetarian meal.",
+      "description": "A vibrant vegetarian dish featuring caramelised tofu, greens, and a homemade XO sauce, served with brown rice.",
       "recipe_yield": "Serves 2",
       "yield_quantity": 2,
       "yield_unit": "servings",
       "total_time": null,
       "prep_time": null,
       "perform_time": null,
-      "total_minutes": 35,
+      "total_minutes": 40,
       "time_estimated": true,
       "tags": [
         "vegetarian",
@@ -241,10 +240,10 @@
         {
           "title": null,
           "text": "the kernels from 1 corn on the cob or 200g frozen kernels",
-          "quantity": 200,
-          "unit": "g",
-          "food": "frozen kernels",
-          "note": "the kernels from 1 corn on the cob or"
+          "quantity": 1,
+          "unit": "corn on the cob",
+          "food": "kernels",
+          "note": "or 200g frozen kernels"
         },
         {
           "title": null,
@@ -372,7 +371,7 @@
       "notes": [
         {
           "title": null,
-          "text": "The XO sauce keeps well in the fridge for a few weeks and can be used to flavour other dishes such as sandwiches and salad bowls."
+          "text": "This dish is all about the sauce. I have suggested making more than you will need, as it keeps well in the fridge for a few weeks and makes almost anything from sandwiches to salad bowls taste even more delicious."
         }
       ]
     }
@@ -381,10 +380,10 @@
     "model": "gpt-4.1",
     "usage": {
       "prompt_tokens": 3278,
-      "completion_tokens": 724,
-      "total_tokens": 4002,
+      "completion_tokens": 722,
+      "total_tokens": 4000,
       "prompt_tokens_details": {
-        "cached_tokens": 1792,
+        "cached_tokens": 2944,
         "audio_tokens": 0
       },
       "completion_tokens_details": {
@@ -396,7 +395,7 @@
     },
     "recipe": {
       "name": "One-pot pasta al limone",
-      "description": "A simple and creamy one-pot pasta dish featuring lemon, garlic, Parmesan, and basil (optional), with vegan options provided.",
+      "description": "A simple, bright, and creamy lemon pasta made in one pot, using the starch from the pasta to create a luscious sauce. Optionally finished with basil.",
       "recipe_yield": "Serves 4",
       "yield_quantity": 4,
       "yield_unit": "servings",
@@ -423,8 +422,8 @@
           "text": "2 large unwaxed lemons",
           "quantity": 2,
           "unit": null,
-          "food": "unwaxed lemons",
-          "note": "large"
+          "food": "large unwaxed lemons",
+          "note": null
         },
         {
           "title": null,
@@ -464,7 +463,7 @@
           "quantity": 40,
           "unit": "g",
           "food": "Parmesan or vegan Parmesan-style cheese",
-          "note": "grated; (I use a vegetarian one)"
+          "note": "grated"
         },
         {
           "title": null,
@@ -496,7 +495,7 @@
       "notes": [
         {
           "title": null,
-          "text": "You could add some greens or even stir through some warmed cannellini beans if you like."
+          "text": "You can add some greens or even stir through some warmed cannellini beans for variation."
         }
       ]
     }
@@ -505,10 +504,10 @@
     "model": "gpt-4.1",
     "usage": {
       "prompt_tokens": 3278,
-      "completion_tokens": 893,
-      "total_tokens": 4171,
+      "completion_tokens": 836,
+      "total_tokens": 4114,
       "prompt_tokens_details": {
-        "cached_tokens": 1792,
+        "cached_tokens": 2944,
         "audio_tokens": 0
       },
       "completion_tokens_details": {
@@ -520,7 +519,7 @@
     },
     "recipe": {
       "name": "Roasted Pepper Panzanella",
-      "description": "A summery bread salad featuring roasted peppers, croutons, mozzarella, and an herby dressing.",
+      "description": "A summery bread salad featuring roasted peppers, croutons, mozzarella, and a savory oregano dressing.",
       "recipe_yield": "Serves 4",
       "yield_quantity": 4,
       "yield_unit": "servings",
@@ -540,8 +539,8 @@
           "text": "4 red, yellow, or orange bell peppers",
           "quantity": 4,
           "unit": null,
-          "food": "bell peppers",
-          "note": "red, yellow, or orange"
+          "food": "red, yellow, or orange bell peppers",
+          "note": null
         },
         {
           "title": null,
@@ -556,64 +555,64 @@
           "text": "1 small red onion, thinly sliced",
           "quantity": 1,
           "unit": null,
-          "food": "red onion",
-          "note": "small, thinly sliced"
+          "food": "small red onion",
+          "note": "thinly sliced"
         },
         {
           "title": null,
-          "text": "1 tablespoon oregano (either spicy fresh or marjoram, mint, or a combo), finely packed (about 2 grams)",
+          "text": "1 tablespoon oregano (either peppery Greek or minty, less-savory Sicilian), finely packed and chopped",
           "quantity": 1,
           "unit": "tablespoon",
           "food": "oregano",
-          "note": "either spicy fresh or marjoram, mint, or a combo, finely packed (about 2 grams)"
+          "note": "either peppery Greek or minty, less-savory Sicilian, finely packed and chopped"
         },
         {
           "title": null,
-          "text": "¾ cup extra-virgin olive oil, divided",
-          "quantity": 0.75,
-          "unit": "cup",
+          "text": "Extra-virgin olive oil",
+          "quantity": null,
+          "unit": null,
           "food": "extra-virgin olive oil",
-          "note": "divided"
-        },
-        {
-          "title": null,
-          "text": "2 tablespoons red wine vinegar",
-          "quantity": 2,
-          "unit": "tablespoon",
-          "food": "red wine vinegar",
           "note": null
         },
         {
           "title": null,
-          "text": "4 cups (age 3) fresh mozzarella, preferably buffalo, torn into pieces",
+          "text": "2 tablespoons red wine or sherry vinegar",
+          "quantity": 2,
+          "unit": "tablespoon",
+          "food": "red wine or sherry vinegar",
+          "note": null
+        },
+        {
+          "title": null,
+          "text": "4 cups (age 2) fresh mozzarella, preferably buffalo, torn into pieces",
           "quantity": 4,
           "unit": "cup",
-          "food": "mozzarella",
-          "note": "preferably buffalo, torn into pieces"
+          "food": "fresh mozzarella, preferably buffalo",
+          "note": "torn into pieces"
         },
         {
           "title": null,
-          "text": "2 tablespoons dried red chile flakes",
+          "text": "2 tablespoons dried hot chili flakes",
           "quantity": 2,
           "unit": "tablespoon",
-          "food": "dried red chile flakes",
+          "food": "dried hot chili flakes",
           "note": null
+        },
+        {
+          "title": null,
+          "text": "2 cups torn croutons (page 269)",
+          "quantity": 2,
+          "unit": "cup",
+          "food": "torn croutons",
+          "note": "see page 269"
         },
         {
           "title": null,
           "text": "Kosher salt and freshly ground black pepper",
           "quantity": null,
           "unit": null,
-          "food": null,
+          "food": "Kosher salt and freshly ground black pepper",
           "note": null
-        },
-        {
-          "title": null,
-          "text": "2 cups (age 2) fresh croutons or torn bread, about 1-inch pieces (see page 269)",
-          "quantity": 2,
-          "unit": "cup",
-          "food": "croutons or torn bread",
-          "note": "about 1-inch pieces"
         }
       ],
       "instructions": [
@@ -623,11 +622,7 @@
         },
         {
           "title": null,
-          "text": "Arrange the whole peppers on a baking sheet. And broil, turning occasionally, until blackened in spots and blistered all over."
-        },
-        {
-          "title": null,
-          "text": "Transfer the peppers to a large bowl; cover with kitchen wrap and let steam. This will allow the flesh to fully soften and the skins to be peeled off easily."
+          "text": "Arrange the whole peppers on a baking sheet and broil, turning occasionally, until all the skins are blackened in spots and blistered all over, 10 to 15 minutes. Transfer the peppers to a large bowl, cover with a kitchen towel, and let them sit for about 10 minutes to steam. This will allow the flesh to fully soften and the skins to be peeled off easily."
         },
         {
           "title": null,
@@ -635,21 +630,17 @@
         },
         {
           "title": null,
-          "text": "When cool enough to handle, peel the roasted peppers and let drain in a large bowl with a dripper. Discard the pepper's challis, seeds, and ribs. Slice the peppers into 1-inch wide strips and return to the bowl."
+          "text": "When the peppers are cool enough to handle, peel and seed them, and then cut them into large, broad strips. Add the drips of juice from the peppers to a large bowl with the onions, garlic, chili flakes, oregano, 1 tablespoon salt, and black pepper. Add ¼ cup olive oil, toss again, and set aside."
         },
         {
           "title": null,
-          "text": "Add the garlic, onion, oregano (or other herb), 1 teaspoon salt, dried chile flakes, and several twists of black pepper. Add ¼ cup olive oil; toss again and set aside."
-        },
-        {
-          "title": null,
-          "text": "Add the small and croutons to the bowl; toss. If peppers juice and up to 3/4 cup water if the peppers seem a bit dry. (Sometimes roasted peppers just don't release much juice.) Toss again, taste and adjust the seasonings. Add the mozzarella and toss to distribute the mozzarella evenly. Serve at room temperature or slightly chilled."
+          "text": "Add the small and croutons to the large bowl. Toss, pressing and distributing the mozzarella evenly. Spread out and distribute the mozzarella on a platter or another bowl, and serve at room temperature or slightly chilled."
         }
       ],
       "notes": [
         {
           "title": "In the field",
-          "text": "That red isn’t the separate species sometimes mistakenly called a red pepper. All bell peppers start green. That coloration is just a brief youthful stage for what later emerges as usually red, but often yellow or orange, peppers. The only outliers: tough-skinned cultivars, purple to colored round, the browns only do so when the chlorophyll fades to greenish."
+          "text": "That red isn’t the separate variety called pimiento, but rather a red bell pepper. A fleshier, slightly sweeter pepper, not at all piquant. Usually red, but you’ll find yellow, orange, and purple too (selected routinely by show cooks). Don’t fret about the color: the flavor is good. If you cook the purple or brown ones, the color fades to greenish."
         }
       ]
     }
