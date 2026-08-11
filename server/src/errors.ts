@@ -8,6 +8,7 @@
  * level here instead of to tracking loudness.
  */
 import type { ErrorHandler } from 'hono';
+import { HTTPException } from 'hono/http-exception';
 import type { ContentfulStatusCode } from 'hono/utils/http-status';
 import { logger } from './logger';
 
@@ -225,6 +226,13 @@ export const errorHandler: ErrorHandler = (err, c) => {
   // worst possible place to discover the request-id middleware went missing.
   const requestId: string = c.get('requestId') ?? crypto.randomUUID();
   const errorId = requestId.slice(0, 8);
+
+  // Hono's own middleware — csrf, body limits — throws this, and it already
+  // carries the right status. Turning a deliberate 403 into a 500 would both
+  // lie to the caller and page us about a defence working.
+  if (err instanceof HTTPException) {
+    return err.getResponse();
+  }
   const level =
     err instanceof AppError ? LOG_LEVEL_BY_SEVERITY[err.severity] : 'error';
 

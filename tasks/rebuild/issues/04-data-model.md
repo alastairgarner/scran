@@ -205,3 +205,19 @@ them. Both were the human's call, made with the trade-off stated.
   data. See the amendment on [ticket 10](10-machine-readable-quantities.md) for what scaling still
   owes — rounding must be unit-aware, and must never snap lines independently, because that drifts
   the ratios between them.
+
+## Amendment from [ticket 19](19-tags.md)
+
+An **eighth table**, `recipeTag(recipeId, tag, PRIMARY KEY (recipeId, tag))`, and a departure from
+this ticket's rule that extraction output is versioned. Tags are produced by extraction but hang off
+**`recipe`**, not `recipeVersion`: filtering the catalogue is the primary query and wants an index
+lookup rather than a `json_each` over a correlated `MAX(versionNo)`, and a tag labels the *dish*
+rather than reproducing the page — so the append-only guarantee, which exists to stop a human's edit
+destroying the model's reading of the page, has nothing to protect here. The cost is real and
+accepted: **the model's original tags are not recoverable** once someone corrects them.
+
+`recipeVersion` also gains `totalMinutes` and `timeEstimated` — see the amendment on
+[ticket 10](10-machine-readable-quantities.md), which owns them.
+
+The `tag` values themselves are **not** a table: a closed vocabulary of ten lives as a TS constant
+in `shared/`, so there is no foreign key and a stale id is ignored on read.

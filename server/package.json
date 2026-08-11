@@ -6,6 +6,9 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@hono/zod-validator": "^0.9.0",
+    "@scran/shared": "workspace:*",
+    "better-auth": "1.6.26",
     "hono": "^4.6.14",
     "pino": "^9.6.0",
     "zod": "^4.1.13"

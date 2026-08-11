@@ -1,0 +1,657 @@
+{
+  "1786049669279-IMG-20180608-WA0000.jpg": {
+    "model": "gpt-4.1",
+    "usage": {
+      "prompt_tokens": 2598,
+      "completion_tokens": 559,
+      "total_tokens": 3157,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "audio_tokens": 0
+      },
+      "completion_tokens_details": {
+        "reasoning_tokens": 0,
+        "audio_tokens": 0,
+        "accepted_prediction_tokens": 0,
+        "rejected_prediction_tokens": 0
+      }
+    },
+    "recipe": {
+      "name": "Chocolate Chip Muffins",
+      "description": "Simple muffins with chocolate chips. Includes variations with raspberries or cranberries. Makes a sweet dessert treat for chocolate lovers.",
+      "recipe_yield": "9 large muffins",
+      "yield_quantity": 9,
+      "yield_unit": "large muffins",
+      "total_time": "20 min",
+      "prep_time": null,
+      "perform_time": null,
+      "total_minutes": 30,
+      "time_estimated": true,
+      "tags": [
+        "vegetarian",
+        "baking",
+        "pudding",
+        "snack"
+      ],
+      "ingredients": [
+        {
+          "title": null,
+          "text": "1 1/2 c. all purpose flour",
+          "quantity": 1.5,
+          "unit": "c.",
+          "food": "all purpose flour",
+          "note": null
+        },
+        {
+          "title": null,
+          "text": "1/2 c. white sugar",
+          "quantity": 0.5,
+          "unit": "c.",
+          "food": "white sugar",
+          "note": null
+        },
+        {
+          "title": null,
+          "text": "3 tsp. baking powder",
+          "quantity": 3,
+          "unit": "tsp.",
+          "food": "baking powder",
+          "note": null
+        },
+        {
+          "title": null,
+          "text": "1/4 tsp. salt",
+          "quantity": 0.25,
+          "unit": "tsp.",
+          "food": "salt",
+          "note": null
+        },
+        {
+          "title": null,
+          "text": "1 c. chocolate chips",
+          "quantity": 1,
+          "unit": "c.",
+          "food": "chocolate chips",
+          "note": null
+        },
+        {
+          "title": null,
+          "text": "1 c. milk",
+          "quantity": 1,
+          "unit": "c.",
+          "food": "milk",
+          "note": null
+        },
+        {
+          "title": null,
+          "text": "1/3 c. melted butter",
+          "quantity": 0.333,
+          "unit": "c.",
+          "food": "melted butter",
+          "note": null
+        },
+        {
+          "title": null,
+          "text": "1 egg",
+          "quantity": 1,
+          "unit": null,
+          "food": "egg",
+          "note": null
+        },
+        {
+          "title": null,
+          "text": "or 1/2 pkt choc chips and 100g frozen raspberries chopped",
+          "quantity": null,
+          "unit": null,
+          "food": null,
+          "note": null
+        },
+        {
+          "title": null,
+          "text": "1/2 cup cranberries (dried)",
+          "quantity": 0.5,
+          "unit": "cup",
+          "food": "cranberries",
+          "note": "dried"
+        }
+      ],
+      "instructions": [
+        {
+          "title": null,
+          "text": "Mix dry ingredients and add chocolate chips."
+        },
+        {
+          "title": null,
+          "text": "Combine egg, milk and butter and stir into flour mixture. Do not beat."
+        },
+        {
+          "title": null,
+          "text": "Bake at 375°F for 20 min."
+        },
+        {
+          "title": null,
+          "text": "A few chocolate chips melted and drizzled over the tops when slightly cooled make these a special dessert treat for chocolate lovers."
+        }
+      ],
+      "notes": [
+        {
+          "title": null,
+          "text": "Variations: Substitute 1/2 packet chocolate chips and 100g frozen raspberries (chopped), or 1/2 cup dried cranberries."
+        }
+      ]
+    }
+  },
+  "1786049672464-IMG20240819200024.jpg": {
+    "model": "gpt-4.1",
+    "usage": {
+      "prompt_tokens": 3278,
+      "completion_tokens": 1279,
+      "total_tokens": 4557,
+      "prompt_tokens_details": {
+        "cached_tokens": 1792,
+        "audio_tokens": 0
+      },
+      "completion_tokens_details": {
+        "reasoning_tokens": 0,
+        "audio_tokens": 0,
+        "accepted_prediction_tokens": 0,
+        "rejected_prediction_tokens": 0
+      }
+    },
+    "recipe": {
+      "name": "Greens & caramelised tofu with XO sauce",
+      "description": "A vibrant dish featuring caramelised tofu, greens, and a homemade XO sauce. Makes a delicious and hearty vegetarian meal.",
+      "recipe_yield": "Serves 2",
+      "yield_quantity": 2,
+      "yield_unit": "servings",
+      "total_time": null,
+      "prep_time": null,
+      "perform_time": null,
+      "total_minutes": 35,
+      "time_estimated": true,
+      "tags": [
+        "vegetarian",
+        "main"
+      ],
+      "ingredients": [
+        {
+          "title": "FOR THE TOFU AND GREENS",
+          "text": "vegetable oil, for frying",
+          "quantity": null,
+          "unit": null,
+          "food": null,
+          "note": null
+        },
+        {
+          "title": null,
+          "text": "200g extra-firm tofu, cut into 2cm-thick strips",
+          "quantity": 200,
+          "unit": "g",
+          "food": "extra-firm tofu",
+          "note": "cut into 2cm-thick strips"
+        },
+        {
+          "title": null,
+          "text": "2 cloves of garlic, peeled and finely chopped",
+          "quantity": 2,
+          "unit": "clove",
+          "food": "garlic",
+          "note": "peeled and finely chopped"
+        },
+        {
+          "title": null,
+          "text": "a thumb-sized piece of ginger, peeled and finely chopped",
+          "quantity": 1,
+          "unit": "thumb-sized piece",
+          "food": "ginger",
+          "note": "peeled and finely chopped"
+        },
+        {
+          "title": null,
+          "text": "a bunch of spring onions, thinly sliced",
+          "quantity": 1,
+          "unit": "bunch",
+          "food": "spring onions",
+          "note": "thinly sliced"
+        },
+        {
+          "title": null,
+          "text": "2 teaspoons soy sauce, plus 1 teaspoon extra for the greens",
+          "quantity": 2,
+          "unit": "teaspoon",
+          "food": "soy sauce",
+          "note": "plus 1 teaspoon extra for the greens"
+        },
+        {
+          "title": null,
+          "text": "a small bunch of coriander, leaves and stalks roughly chopped",
+          "quantity": 1,
+          "unit": "small bunch",
+          "food": "coriander",
+          "note": "leaves and stalks roughly chopped"
+        },
+        {
+          "title": null,
+          "text": "1 head of cavolo nero, shredded",
+          "quantity": 1,
+          "unit": "head",
+          "food": "cavolo nero",
+          "note": "shredded"
+        },
+        {
+          "title": null,
+          "text": "the kernels from 1 corn on the cob or 200g frozen kernels",
+          "quantity": 200,
+          "unit": "g",
+          "food": "frozen kernels",
+          "note": "the kernels from 1 corn on the cob or"
+        },
+        {
+          "title": null,
+          "text": "1 teaspoon rice wine vinegar",
+          "quantity": 1,
+          "unit": "teaspoon",
+          "food": "rice wine vinegar",
+          "note": null
+        },
+        {
+          "title": "FOR THE XO SAUCE",
+          "text": "1 tablespoon flavourless vegetable or rapeseed oil",
+          "quantity": 1,
+          "unit": "tablespoon",
+          "food": "flavourless vegetable or rapeseed oil",
+          "note": null
+        },
+        {
+          "title": null,
+          "text": "1 red onion, very finely chopped",
+          "quantity": 1,
+          "unit": null,
+          "food": "red onion",
+          "note": "very finely chopped"
+        },
+        {
+          "title": null,
+          "text": "2 red chillies, finely chopped",
+          "quantity": 2,
+          "unit": null,
+          "food": "red chillies",
+          "note": "finely chopped"
+        },
+        {
+          "title": null,
+          "text": "4 cloves of garlic, finely chopped",
+          "quantity": 4,
+          "unit": "clove",
+          "food": "garlic",
+          "note": "finely chopped"
+        },
+        {
+          "title": null,
+          "text": "½ teaspoon dried chilli flakes",
+          "quantity": 0.5,
+          "unit": "teaspoon",
+          "food": "dried chilli flakes",
+          "note": null
+        },
+        {
+          "title": null,
+          "text": "1 teaspoon smoked paprika",
+          "quantity": 1,
+          "unit": "teaspoon",
+          "food": "smoked paprika",
+          "note": null
+        },
+        {
+          "title": null,
+          "text": "3 tablespoons honey or maple syrup",
+          "quantity": 3,
+          "unit": "tablespoon",
+          "food": "honey or maple syrup",
+          "note": null
+        },
+        {
+          "title": null,
+          "text": "1 tablespoon sesame oil",
+          "quantity": 1,
+          "unit": "tablespoon",
+          "food": "sesame oil",
+          "note": null
+        },
+        {
+          "title": null,
+          "text": "2 tablespoons soy sauce",
+          "quantity": 2,
+          "unit": "tablespoon",
+          "food": "soy sauce",
+          "note": null
+        },
+        {
+          "title": null,
+          "text": "1 tablespoon rice vinegar",
+          "quantity": 1,
+          "unit": "tablespoon",
+          "food": "rice vinegar",
+          "note": null
+        },
+        {
+          "title": null,
+          "text": "2 tablespoons toasted sesame seeds",
+          "quantity": 2,
+          "unit": "tablespoon",
+          "food": "toasted sesame seeds",
+          "note": null
+        },
+        {
+          "title": "TO SERVE",
+          "text": "300g brown rice (see page 193)",
+          "quantity": 300,
+          "unit": "g",
+          "food": "brown rice",
+          "note": "see page 193"
+        }
+      ],
+      "instructions": [
+        {
+          "title": null,
+          "text": "Start with the XO sauce. Heat the oil in a small frying pan over a medium heat. Add the red onion, chopped chillies and garlic and a pinch of salt and fry, stirring occasionally, for 15 minutes, until everything is glossy and completely soft. Stir in the dried chilli flakes and smoked paprika and remove from the heat. Add the remaining sauce ingredients and stir well to combine. Reserve 4 tablespoons of the XO sauce for the tofu. The rest of the sauce will keep well in a jar in the fridge for up to 3 weeks."
+        },
+        {
+          "title": null,
+          "text": "Heat a splash of oil in a large frying pan over a high heat. Cook the tofu for 3 minutes on each side, until golden and crispy. Add the garlic, ginger and spring onions and cook for another minute, then add the soy sauce and cook for about 30 seconds before spooning in the reserved XO sauce. Cook for 3–4 minutes until everything is thickened and caramelised. Remove from the heat and stir in the coriander, then put onto a plate."
+        },
+        {
+          "title": null,
+          "text": "Wipe the frying pan clean with kitchen paper. Pour in a tablespoon of oil and heat to medium-high. Stir in the shredded cavolo nero and corn and add the rice wine vinegar and 1 teaspoon of soy sauce. Cook for 2–3 minutes, stirring a couple of times until the corn is blackened in places and the greens are bright and crisp at the edges. Stir through the tofu."
+        },
+        {
+          "title": null,
+          "text": "Serve in warm bowls with cooked brown rice."
+        }
+      ],
+      "notes": [
+        {
+          "title": null,
+          "text": "The XO sauce keeps well in the fridge for a few weeks and can be used to flavour other dishes such as sandwiches and salad bowls."
+        }
+      ]
+    }
+  },
+  "1786049678584-IMG20260515103935.jpg": {
+    "model": "gpt-4.1",
+    "usage": {
+      "prompt_tokens": 3278,
+      "completion_tokens": 724,
+      "total_tokens": 4002,
+      "prompt_tokens_details": {
+        "cached_tokens": 1792,
+        "audio_tokens": 0
+      },
+      "completion_tokens_details": {
+        "reasoning_tokens": 0,
+        "audio_tokens": 0,
+        "accepted_prediction_tokens": 0,
+        "rejected_prediction_tokens": 0
+      }
+    },
+    "recipe": {
+      "name": "One-pot pasta al limone",
+      "description": "A simple and creamy one-pot pasta dish featuring lemon, garlic, Parmesan, and basil (optional), with vegan options provided.",
+      "recipe_yield": "Serves 4",
+      "yield_quantity": 4,
+      "yield_unit": "servings",
+      "total_time": null,
+      "prep_time": null,
+      "perform_time": null,
+      "total_minutes": 20,
+      "time_estimated": true,
+      "tags": [
+        "vegetarian",
+        "main"
+      ],
+      "ingredients": [
+        {
+          "title": null,
+          "text": "400g spaghetti or linguine",
+          "quantity": 400,
+          "unit": "g",
+          "food": "spaghetti or linguine",
+          "note": null
+        },
+        {
+          "title": null,
+          "text": "2 large unwaxed lemons",
+          "quantity": 2,
+          "unit": null,
+          "food": "unwaxed lemons",
+          "note": "large"
+        },
+        {
+          "title": null,
+          "text": "1 clove of garlic, peeled and bashed but kept whole",
+          "quantity": 1,
+          "unit": "clove",
+          "food": "garlic",
+          "note": "peeled and bashed but kept whole"
+        },
+        {
+          "title": null,
+          "text": "100ml olive oil",
+          "quantity": 100,
+          "unit": "ml",
+          "food": "olive oil",
+          "note": null
+        },
+        {
+          "title": null,
+          "text": "1 teaspoon flaky sea salt",
+          "quantity": 1,
+          "unit": "teaspoon",
+          "food": "flaky sea salt",
+          "note": null
+        },
+        {
+          "title": null,
+          "text": "50g salted butter or vegan butter",
+          "quantity": 50,
+          "unit": "g",
+          "food": "salted butter or vegan butter",
+          "note": null
+        },
+        {
+          "title": null,
+          "text": "40g Parmesan or vegan Parmesan-style cheese (I use a vegetarian one), grated",
+          "quantity": 40,
+          "unit": "g",
+          "food": "Parmesan or vegan Parmesan-style cheese",
+          "note": "grated; (I use a vegetarian one)"
+        },
+        {
+          "title": null,
+          "text": "½ a bunch of basil (15g), leaves picked and torn (optional)",
+          "quantity": 0.5,
+          "unit": "bunch",
+          "food": "basil",
+          "note": "leaves picked and torn (optional)"
+        }
+      ],
+      "instructions": [
+        {
+          "title": null,
+          "text": "Put 400g spaghetti or linguine into a large lidded saucepan. Grate in the zest of 2 large unwaxed lemons and add 1 clove of garlic, peeled and bashed but kept whole, 100ml olive oil and 1 teaspoon flaky sea salt."
+        },
+        {
+          "title": null,
+          "text": "Add 1 litre boiling water, cover with a lid and bring to the boil. As soon as it boils, remove the lid and simmer for 8 minutes, using a pair of tongs to turn the pasta in the thickening pasta water every 30 seconds or so as it cooks."
+        },
+        {
+          "title": null,
+          "text": "Once the pasta has had 8 minutes, squeeze in the juice of one of the zested lemons and simmer for a final 2 minutes with the lid off."
+        },
+        {
+          "title": "Finish the pasta",
+          "text": "Once almost all the water has evaporated, take the pan off the heat, stir in 50g salted butter or vegan butter and 20g grated Parmesan or vegan Parmesan-style cheese and leave to sit for a minute or two, so the pasta can absorb most of the remaining water and form a lemony sauce. Taste and add more salt, lemon juice and butter or cheese as needed. Tangle into bowls and finish with the rest of the Parmesan and ½ a bunch of torn basil leaves, if you like."
+        }
+      ],
+      "notes": [
+        {
+          "title": null,
+          "text": "You could add some greens or even stir through some warmed cannellini beans if you like."
+        }
+      ]
+    }
+  },
+  "1786049683459-IMG20260515105612.jpg": {
+    "model": "gpt-4.1",
+    "usage": {
+      "prompt_tokens": 3278,
+      "completion_tokens": 893,
+      "total_tokens": 4171,
+      "prompt_tokens_details": {
+        "cached_tokens": 1792,
+        "audio_tokens": 0
+      },
+      "completion_tokens_details": {
+        "reasoning_tokens": 0,
+        "audio_tokens": 0,
+        "accepted_prediction_tokens": 0,
+        "rejected_prediction_tokens": 0
+      }
+    },
+    "recipe": {
+      "name": "Roasted Pepper Panzanella",
+      "description": "A summery bread salad featuring roasted peppers, croutons, mozzarella, and an herby dressing.",
+      "recipe_yield": "Serves 4",
+      "yield_quantity": 4,
+      "yield_unit": "servings",
+      "total_time": null,
+      "prep_time": null,
+      "perform_time": null,
+      "total_minutes": 45,
+      "time_estimated": true,
+      "tags": [
+        "vegetarian",
+        "main",
+        "side"
+      ],
+      "ingredients": [
+        {
+          "title": null,
+          "text": "4 red, yellow, or orange bell peppers",
+          "quantity": 4,
+          "unit": null,
+          "food": "bell peppers",
+          "note": "red, yellow, or orange"
+        },
+        {
+          "title": null,
+          "text": "2 garlic cloves, finely chopped",
+          "quantity": 2,
+          "unit": "clove",
+          "food": "garlic",
+          "note": "finely chopped"
+        },
+        {
+          "title": null,
+          "text": "1 small red onion, thinly sliced",
+          "quantity": 1,
+          "unit": null,
+          "food": "red onion",
+          "note": "small, thinly sliced"
+        },
+        {
+          "title": null,
+          "text": "1 tablespoon oregano (either spicy fresh or marjoram, mint, or a combo), finely packed (about 2 grams)",
+          "quantity": 1,
+          "unit": "tablespoon",
+          "food": "oregano",
+          "note": "either spicy fresh or marjoram, mint, or a combo, finely packed (about 2 grams)"
+        },
+        {
+          "title": null,
+          "text": "¾ cup extra-virgin olive oil, divided",
+          "quantity": 0.75,
+          "unit": "cup",
+          "food": "extra-virgin olive oil",
+          "note": "divided"
+        },
+        {
+          "title": null,
+          "text": "2 tablespoons red wine vinegar",
+          "quantity": 2,
+          "unit": "tablespoon",
+          "food": "red wine vinegar",
+          "note": null
+        },
+        {
+          "title": null,
+          "text": "4 cups (age 3) fresh mozzarella, preferably buffalo, torn into pieces",
+          "quantity": 4,
+          "unit": "cup",
+          "food": "mozzarella",
+          "note": "preferably buffalo, torn into pieces"
+        },
+        {
+          "title": null,
+          "text": "2 tablespoons dried red chile flakes",
+          "quantity": 2,
+          "unit": "tablespoon",
+          "food": "dried red chile flakes",
+          "note": null
+        },
+        {
+          "title": null,
+          "text": "Kosher salt and freshly ground black pepper",
+          "quantity": null,
+          "unit": null,
+          "food": null,
+          "note": null
+        },
+        {
+          "title": null,
+          "text": "2 cups (age 2) fresh croutons or torn bread, about 1-inch pieces (see page 269)",
+          "quantity": 2,
+          "unit": "cup",
+          "food": "croutons or torn bread",
+          "note": "about 1-inch pieces"
+        }
+      ],
+      "instructions": [
+        {
+          "title": null,
+          "text": "Heat the broiler."
+        },
+        {
+          "title": null,
+          "text": "Arrange the whole peppers on a baking sheet. And broil, turning occasionally, until blackened in spots and blistered all over."
+        },
+        {
+          "title": null,
+          "text": "Transfer the peppers to a large bowl; cover with kitchen wrap and let steam. This will allow the flesh to fully soften and the skins to be peeled off easily."
+        },
+        {
+          "title": null,
+          "text": "Reduce the oven temperature to 400°F."
+        },
+        {
+          "title": null,
+          "text": "When cool enough to handle, peel the roasted peppers and let drain in a large bowl with a dripper. Discard the pepper's challis, seeds, and ribs. Slice the peppers into 1-inch wide strips and return to the bowl."
+        },
+        {
+          "title": null,
+          "text": "Add the garlic, onion, oregano (or other herb), 1 teaspoon salt, dried chile flakes, and several twists of black pepper. Add ¼ cup olive oil; toss again and set aside."
+        },
+        {
+          "title": null,
+          "text": "Add the small and croutons to the bowl; toss. If peppers juice and up to 3/4 cup water if the peppers seem a bit dry. (Sometimes roasted peppers just don't release much juice.) Toss again, taste and adjust the seasonings. Add the mozzarella and toss to distribute the mozzarella evenly. Serve at room temperature or slightly chilled."
+        }
+      ],
+      "notes": [
+        {
+          "title": "In the field",
+          "text": "That red isn’t the separate species sometimes mistakenly called a red pepper. All bell peppers start green. That coloration is just a brief youthful stage for what later emerges as usually red, but often yellow or orange, peppers. The only outliers: tough-skinned cultivars, purple to colored round, the browns only do so when the chlorophyll fades to greenish."
+        }
+      ]
+    }
+  }
+}

@@ -2,7 +2,10 @@ import { describe, expect, it } from 'bun:test';
 import { join } from 'node:path';
 import { parseConfig } from './config';
 
-const required = { OPENAI_API_KEY: 'sk-test' };
+const required = {
+  OPENAI_API_KEY: 'sk-test',
+  AUTH_SECRET: 'x'.repeat(32),
+};
 
 describe('parseConfig', () => {
   it('names every missing variable in the message', () => {

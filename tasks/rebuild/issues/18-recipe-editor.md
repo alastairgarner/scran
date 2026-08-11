@@ -32,3 +32,13 @@ The shape of the surface, given the model is already locked:
 
 Prototype it against the same throwaway harness ticket 06 built (`bun run proto`), with the real
 recipes. The mangled Panzanella line is the test case worth designing for.
+
+## Amendment from [ticket 19](19-tags.md)
+
+**Tag correction belongs to this screen**, on the principle that there is one place you go to change
+something about a recipe — splitting text-here, tags-there invents a distinction that only exists in
+the schema. The tag row in the recipe header stays read-only.
+
+Behind the seam the two saves differ, and the prototype should not pretend otherwise: a text edit
+**appends a version**, while tags are a plain write to `recipeTag` and **append nothing**. Ten tags
+from a fixed vocabulary, so the control is a checklist, not an input.

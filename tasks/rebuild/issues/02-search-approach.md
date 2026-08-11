@@ -56,3 +56,19 @@ column → in-memory cosine scan → blend with FTS5 by rank fusion → `sqlite-
 of recipes. Steps 1–2 are purely additive. Embedding 300 recipes costs $0.003; the real cost of
 semantic search is ~100–300 ms per query to embed the search string, and an OpenAI dependency on
 the search box.
+
+## Amendment from [ticket 19](19-tags.md)
+
+Tags are indexed, so searching *veggie* returns everything tagged `vegetarian` whether or not the
+word is on the page. Three consequences for what this ticket built:
+
+- **`recipeSearch` gains a `tags` column.** FTS5 does not support `ALTER TABLE ADD COLUMN`, so it
+  arrives by dropping and recreating the virtual table — free while nothing has been indexed yet.
+- **`recipeVersionIndex` must re-select the tags** in its `DELETE`+`INSERT`. Tags hang off `recipe`
+  and this trigger fires on `recipeVersion`, so without it every edit silently wipes them from the
+  index — the exact class of bug the trigger exists to prevent.
+- **A second trigger on `recipeTag`** insert/delete keeps the column current, since no version is
+  appended when someone corrects a tag.
+
+What gets indexed per tag is a **synonym string**, not the id — `porter` stemming does not reach
+from *veggie* to *vegetarian*. It lives beside the id and label in ticket 19's TS constant.

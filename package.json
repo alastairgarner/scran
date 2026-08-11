@@ -8,6 +8,7 @@
   ],
   "scripts": {
     "dev": "bun run --filter '*' dev",
+    "invite": "bun --env-file=.env server/src/cli/invite.ts",
     "test": "bun test",
     "check": "biome check . && bun run --filter '*' typecheck",
     "fix": "biome check --write .",

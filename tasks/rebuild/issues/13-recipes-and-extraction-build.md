@@ -34,3 +34,14 @@ field descriptions that carry the extraction instructions, under OpenAI strict m
 
 Done when a photo posted to the API becomes a `ready` recipe with a version, a failed extraction
 leaves a retryable `failed` row with the photo still on disk, and the suite passes offline.
+
+## Amendment from [ticket 19](19-tags.md)
+
+Tags ship **here**, minus their editing UI: the `recipeTag` table, the ten-tag vocabulary constant
+in `shared/`, the `enum`-constrained `tags` array on the extraction schema, the `vegan` ⇒
+`vegetarian` normalisation on write, and the rebuilt `recipeSearch` with its tags column and second
+trigger. One edit to `extract.ts` shared with [ticket 10](10-machine-readable-quantities.md), which
+lands the same prompt change and `totalMinutes` beside it.
+
+Not here: filter chips ([ticket 21](21-client-build.md)) and tag correction
+([ticket 18](18-recipe-editor.md)).

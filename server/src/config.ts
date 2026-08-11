@@ -22,6 +22,9 @@ const envSchema = z.object({
     .default('info'),
   PORT: z.coerce.number().int().positive().default(3000),
   BASE_URL: z.url().default('http://localhost:3000'),
+  // Signs the session cookie. A leaked database replays as 401 without it, so
+  // it is the one secret that must not be backed up beside `scran.db`.
+  AUTH_SECRET: z.string().min(32),
   // Off on the LAN, on behind TLS. The whole TLS story that is in scope.
   COOKIE_SECURE: z.stringbool().default(false),
 });
@@ -51,6 +54,7 @@ export function parseConfig(env: Record<string, string | undefined>) {
     logLevel: parsed.data.LOG_LEVEL,
     port: parsed.data.PORT,
     baseUrl: parsed.data.BASE_URL,
+    authSecret: parsed.data.AUTH_SECRET,
     cookieSecure: parsed.data.COOKIE_SECURE,
   };
 }

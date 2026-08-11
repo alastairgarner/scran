@@ -27,3 +27,34 @@ Build the real client to ticket 06's answer. It replaces `client/src/main.tsx` w
 
 Done when someone who isn't the author can sign in on their own phone, capture a recipe, read it
 while cooking, and rate it.
+
+## Amendment from [ticket 12](12-auth-and-invites-build.md)
+
+The screen list says "sign-in" and needs a second one: **`/invite/:token`**, the signup form. The
+server deliberately renders no HTML — `GET /api/invites/:token` returns `{ email }` or 404, and
+`POST` to the same path redeems and sets the session cookie, so this route is the *only* way an
+invited person gets an account. Prefill the email when the invite carries one, resolve
+`signUpSchema` from `@scran/shared` (the same schema the route validates), and treat 404 as "ask
+whoever sent it for a new one" rather than an error screen.
+
+## Amendment from [ticket 19](19-tags.md)
+
+The filter sheet's tag chips are **read-only here** — the vocabulary is a constant, the tags come
+from `recipeTag`, and correcting one belongs to [ticket 18](18-recipe-editor.md). Chips sort by
+usage, per ticket 06.
+
+Speed filters are **bands over `totalMinutes`** (under 30 / 30–60 / over an hour), computed in the
+client and not stored, so retuning them is one array. An estimated time renders with a `~` —
+`timeEstimated` says whether the page stated it or the model judged it, and the two are different
+claims. This is also what finally makes **sort by quickest** work; it had no number to sort on.
+
+## Amendment from [ticket 10](10-machine-readable-quantities.md)
+
+**No rounding. Significant figures are the answer, not a placeholder.** Ticket 06 left the client
+showing sig figs pending unit-aware rounding here; ticket 10 ruled that out — `1.22 thumbs of
+ginger` is the most accurate thing there is, and the unit is a free-form string nothing may
+interpret. There is no `scale.ts` to import and no rounding table to key off `unit`.
+
+A line renders scaled **iff `quantity` is non-null**; otherwise show `text` verbatim and mark it
+unscalable. There is no `or` heuristic to port from the prototype — the model made that call at
+extraction time.

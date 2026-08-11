@@ -134,27 +134,82 @@ scale. Read it before naming anything.
   "our house" needs a schema). Tags came back into scope. **Ticket 03's swap test passes**: two
   skins plus dark, one file. Spawned tickets 18–21.
 
+- [Build the server foundation](issues/11-server-foundation.md) — **done, and marked so
+  retrospectively**; the `Scaffold backend` commit left the ticket open by oversight. `config.ts`,
+  `db.ts`, `errors.ts`, `logger.ts`, `storage.ts`, `index.ts` with `/api/health` behind one
+  `onError`, tests on the four testable modules, `001-init.sql` carrying ticket 04's six tables and
+  ticket 02's FTS table and both triggers, `shared` in the workspaces array. **Bun 1.1.42 →
+  1.3.14.** Everything after this is now unblocked by it, including ticket 12.
+- [Do households exist, and what are they for?](issues/20-households.md) — **a household is a saved
+  selection, not an entity**: a per-user list of people you've pointed at, with no shared object and
+  no agreement. Settled by the scale — six users, three couples — which makes the list **exactly one
+  person**, and nobody needs to agree about a set of size one. One join table, `householdMember`,
+  making seven beside Better Auth's four. Populated **through the settings UI only**; invite seeding
+  was dropped, so tickets 01 and 12 are unamended and **ticket 12 no longer depends on this**.
+  Asymmetry is fine, an empty list **hides** the `Our house` scope, and the blast radius is the
+  rating-scope `WHERE` **and nothing else** — so the amendment to ticket 04 is narrower than
+  expected: the `rating` table doesn't change. Gave scran its **second surface** (a gear-icon drawer)
+  and its **first sign out**, which ticket 06 never provided. Spawned ticket 22.
+- [Model tags, and get the model to assign them](issues/19-tags.md) — **ten tags, two axes,
+  hard-coded in `shared/`**, assigned by the model from an `enum` it can't escape, on an eighth
+  table `recipeTag` keyed to **`recipe` not `recipeVersion`** — a deliberate break from ticket 04,
+  because a tag labels the dish rather than reproducing the page, and correcting one must not cost a
+  version. **Speed stopped being a tag**: the real data has no time to derive from — six of nine
+  rows carry none, and the one that does is wrong — so the model now supplies `totalMinutes` **and
+  says whether it read it or judged it**, which is the prompt's one carve-out from *invent nothing*.
+  Bands are a UI constant over that number, which also fixes ticket 06's **sort by quickest**. Tags
+  are **indexed with synonyms** (*veggie* finds `vegetarian`), amending ticket 02's trigger and
+  costing a second one. Correction lives in **the editor**, on the human's call that one screen owns
+  changing a recipe. Split with **no new ticket**: schema and assignment to 13 (merged with ticket
+  10's prompt change), chips to 21, editing to 18 — and ticket 10's sanctioned re-extraction **is**
+  the backfill.
+- [Build auth, invites and the invite command](issues/12-auth-and-invites-build.md) — **built**:
+  Better Auth 1.6.26, `bun run invite [email]`, and the GET-renders / POST-redeems split, proven
+  against a real server across a restart. Three calls the ticket left open. Better Auth's four
+  tables are created by **its own migrator at boot** (`getMigrations`) rather than by its CLI — the
+  vendor island survives, and an empty database (`:memory:`, or ticket 16's first container start)
+  ends up complete without a manual step. Public sign-up is closed **at the Hono layer**, since
+  `disableSignUp` would also block the server-side call redemption makes. And **`AUTH_SECRET` joins
+  `config.ts`** — ticket 11's variable list predates this decision. Writing the CSRF test found a
+  real bug in ticket 07's boundary: `HTTPException` became a 500, so a deliberate 403 both lied and
+  paged; fixed. `signUpSchema` is the first thing in `shared/`, and `testing.ts` now exports the
+  real-invite session fixture every later test file uses.
+
+- [Give ingredients machine-readable quantities](issues/10-machine-readable-quantities.md) — **the
+  work is all in the field descriptions**, and two things got ruled out rather than built. **The unit
+  is a free-form string the code never reads** — nothing converts between units, so `1 thumb` × 2 is
+  `2 thumb` and a closed unit vocabulary buys nothing. That kills **rounding** too, since unit-aware
+  rounding needs a vocabulary to key on: significant figures are the answer, not an interim, which
+  **overrides ticket 06's amendment**. A line is unscalable **iff `quantity` is null** — the model
+  decides while looking at the page, so ticket 06's `\bor\b` heuristic is deleted rather than fixed.
+  Ticket 19's tags, `total_minutes` and `time_estimated` landed in the same edit; `TAGS` and
+  `normaliseTags` are now in `shared/`. Evidence: 47 of 50 real ingredient lines scalable, the other
+  3 correctly not, **no false positives**, fractions clean. Iterating found three prompt bugs,
+  including one **this ticket caused** — the judge-a-duration carve-out leaked into verbatim
+  `totalTime` and had to be fenced. Four recorded responses are checked in for ticket 13.
+
 ## Not yet specified
 
 <!--
   Ticket 06 cleared this section almost entirely: the hand-edit surface graduated to ticket 18,
   the client build to ticket 21, and scaling, search and the rating/comment UI were all simply
-  answered by it. What's left is what that answer opened up.
+  answered by it. Ticket 19 then answered both tag items outright — the sequencing call is made
+  (schema with 13, chips with 21, editing with 18) and backfill turned out to be free, since ticket
+  10's sanctioned re-extraction produces tags. One patch left, and it needs a real catalogue first.
 -->
 
-- **Whether tags ship with ticket 13 or after it.** [Ticket 19](issues/19-tags.md) changes the same
-  prompt and response schema as ticket 10, so the two probably land together — but that's a
-  sequencing call nobody has made, and it's the thing standing between "tags are decided" and
-  "tags are built".
-- **Backfilling tags onto the existing recipes.** Re-extraction over a recipe that already has
-  content is forbidden, so tags arrive by a separate cheap pass or not at all. Which, and whether
-  it's worth it for seven recipes, isn't sharp yet.
 - **What the catalogue feels like at fifty recipes.** Everything was judged against five. Density,
   whether sort-by-recent stays the right default, and whether the filter sheet is reached often
   enough to deserve its button are all open — and unanswerable until there's a real catalogue,
   which means after ticket 17's migration.
 
 ## Out of scope
+
+**Two maps take what this one rules out.** [Post-launch enhancements](../enhancements/map.md) — a
+parked, uncharted standing map — now holds every *feature* below (eval harness, shopping lists,
+meal planning) plus meal photos and semantic search, on the grounds that being out of *this* scope
+isn't the same as being worthless. The public deploy is still its own future map. Ruling something
+out here means picking which of the two it lands on.
 
 - **VPS, domain, TLS to the public internet, offsite backups.** The destination stops at the home
   server. A public deploy is a fresh effort.
@@ -167,7 +222,7 @@ scale. Read it before naming anything.
   grounds that search answers the question people actually ask; ticket 06 showed it doesn't. FTS5
   matches words that are *on the page*, so every categorical question — quick, veggie, midweek —
   is invisible to it. Returns as a **closed vocabulary the model picks from**, because free-form
-  tags drift.
+  tags drift — now settled at ten, on diet and course only.
 - **Shopping lists.** Ruled out flatly. (**Scaling was wrongly listed here** — the prototype map
   *deferred* it, saying whichever of the two got built first is what forces ingredients to be
   structured. Ticket 04 restored it to scope; it now lives in **Not yet specified**.)

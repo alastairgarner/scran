@@ -1,7 +1,7 @@
 # Build the server foundation
 
 Type: task
-Status: open
+Status: resolved
 Assignee: alastair
 Blocked by: 05
 
@@ -31,3 +31,21 @@ Bun is on 1.1.42 and ticket 08 said it wants upgrading — do it here, before an
 
 Done when `bun run dev` boots, applies migrations to an empty database, and fails loudly and
 usefully with an env var missing.
+
+## Answer
+
+Built as specified, in the `Scaffold backend` commit — this ticket was left `open` by an oversight
+and is marked resolved retrospectively.
+
+`server/src/` holds `config.ts`, `db.ts`, `errors.ts`, `logger.ts`, `storage.ts` and `index.ts`,
+with `bun:test` unit tests beside config, db, errors and storage. `migrations/001-init.sql` carries
+ticket 04's six tables (`recipe`, `recipeVersion`, `source`, `rating`, `comment`, `invite`) plus
+ticket 02's `recipeSearch` FTS5 virtual table and both of its triggers — insert on `recipeVersion`
+and the soft-delete update on `recipe`. Better Auth's four tables are absent, as intended. `index.ts`
+exposes `/api/health` behind a single `onError`, and `shared` is in the root `workspaces` array.
+
+**Bun was upgraded** as the ticket required — 1.1.42 → **1.3.14**.
+
+Subsequently amended by [ticket 20](20-households.md): a seventh table, `householdMember`, arrives
+as a **new numbered migration** rather than an edit to `001-init.sql`, since this one has already
+run. That work belongs to [ticket 22](22-settings-and-households-build.md).
