@@ -27,11 +27,7 @@
       "perform_time": null,
       "total_minutes": 30,
       "time_estimated": true,
-      "tags": [
-        "vegetarian",
-        "baking",
-        "snack"
-      ],
+      "tags": ["vegetarian", "baking", "snack"],
       "ingredients": [
         {
           "title": null,
@@ -168,10 +164,7 @@
       "perform_time": null,
       "total_minutes": 40,
       "time_estimated": true,
-      "tags": [
-        "vegetarian",
-        "main"
-      ],
+      "tags": ["vegetarian", "main"],
       "ingredients": [
         {
           "title": "FOR THE TOFU AND GREENS",
@@ -404,10 +397,7 @@
       "perform_time": null,
       "total_minutes": 20,
       "time_estimated": true,
-      "tags": [
-        "vegetarian",
-        "main"
-      ],
+      "tags": ["vegetarian", "main"],
       "ingredients": [
         {
           "title": null,
@@ -528,11 +518,7 @@
       "perform_time": null,
       "total_minutes": 45,
       "time_estimated": true,
-      "tags": [
-        "vegetarian",
-        "main",
-        "side"
-      ],
+      "tags": ["vegetarian", "main", "side"],
       "ingredients": [
         {
           "title": null,

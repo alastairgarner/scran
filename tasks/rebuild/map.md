@@ -192,6 +192,19 @@ scale. Read it before naming anything.
   the one unstable photo is a **perception** failure, so it is [ticket 15](issues/15-capture-orientation.md)'s
   and no prompt can fix it.
 
+- [Build the recipes module and the extraction pipeline](issues/13-recipes-and-extraction-build.md)
+  — **built, and the schema question answered in zod's favour**: `z.toJSONSchema` keeps every field
+  description under OpenAI strict mode, verified against the live API, so ticket 05's hand-written
+  fallback dies and the contract is defined **once**. Two schemas in `shared/` — the model contract
+  (snake_case, Mealie's names) and the stored shape — with one mapper between them. Ticket 19's tags
+  cost a **ninth table**: `tagSearch`, a boot-synced projection of the `TAGS` constant, because a
+  trigger cannot read a TypeScript array and the alternative would silently strand already-tagged
+  recipes when a synonym changes. Three real bugs found while building: **retry could start a second
+  concurrent extraction**, the stale sweep keyed on `createdAt` so a retried recipe was stale
+  instantly, and unchained route registration would have handed ticket 21 an RPC client with **no
+  endpoints**. Search now ranks by **bm25** where there's a query. `PUT /tags` was built and removed
+  — it is ticket 18's. **Unblocks 14, 15, 16, 17 and 21.**
+
 ## Not yet specified
 
 <!--
