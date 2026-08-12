@@ -208,3 +208,18 @@ instability been sampling, it would have frozen the whole output. It froze the j
 the reading wobbling, which is direct evidence that Panzanella is a **perception** failure and not a
 prompt or decoding one. No wording and no decoding parameter fixes a two-column spread the model
 cannot resolve; that needs preprocessing, and it belongs to [ticket 15](15-capture-orientation.md).
+
+### One known hole, deferred by decision
+
+`quantity` being non-null is not quite sufficient for a line to be safely scalable. Where a line
+offers a **choice of amount** — `the kernels from 1 corn on the cob or 200g frozen kernels` — the
+model picks one and strands the other in `note`, which is prose and never scales. Doubling renders
+*"2 corn on the cob, or 200g frozen kernels"*, half of it silently wrong. One line in fifty in the
+real data.
+
+Deferred to the post-launch map as
+[Ingredient lines that offer a choice of amount](../../enhancements/issues/02-alternative-amounts.md)
+rather than fixed here: the fix is a nested `alternatives` array plus a renderer branch plus an
+editor case, all designed against zero real usage, and **hand-correction is a legal backfill path**
+so nothing is foreclosed by waiting. The interim consequence belongs to ticket 21, recorded there:
+`note` must render as verbatim prose and must never be treated as scalable.

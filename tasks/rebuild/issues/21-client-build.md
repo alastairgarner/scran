@@ -58,3 +58,17 @@ interpret. There is no `scale.ts` to import and no rounding table to key off `un
 A line renders scaled **iff `quantity` is non-null**; otherwise show `text` verbatim and mark it
 unscalable. There is no `or` heuristic to port from the prototype — the model made that call at
 extraction time.
+
+**`note` is prose, and it can contain numbers.** Where a line offers a choice of amount, the model
+keeps one in `quantity` and leaves the other in `note` — `1 corn on the cob` with
+`note: "or 200g frozen kernels"`. A scaled line renders its *parts* scaled and its `note` verbatim;
+never scale, parse or reformat `note`.
+
+That case is the one that slips through "flag anything that isn't scaling", because the line **is**
+scaling — only its note isn't. So the marker rule takes a second clause:
+
+> mark a line unscaled when `quantity` is null **or** `note` contains a digit.
+
+`"or 200g frozen kernels"` is flagged; `"finely chopped"` is not. One rule, no new UI concept, and it
+closes the hole without a schema change. The proper fix — alternatives that each scale — is deferred
+to [the post-launch map](../../enhancements/issues/02-alternative-amounts.md).
