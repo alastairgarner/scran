@@ -1,7 +1,8 @@
 # What does fixing a recipe look like?
 
 Type: prototype
-Status: open
+Status: resolved
+Reviewer: human
 Assignee: alastair
 Blocked by: 06
 
@@ -43,3 +44,15 @@ the schema. The tag row in the recipe header stays read-only.
 Behind the seam the two saves differ, and the prototype should not pretend otherwise: a text edit
 **appends a version**, while tags are a plain write to `recipeTag` and **append nothing**. Ten tags
 from a fixed vocabulary, so the control is a checklist, not an input.
+
+## Answer
+
+Validated in variant K of the `prototype/recipe-editor` worktree. The pencil opens a dedicated edit
+layout: ingredients first, method second, with each ingredient line and step directly editable in
+its own card. Method titles are omitted. A `+` between cards inserts there; each card can be deleted.
+
+Reordering is select, scroll, place — not drag and drop. A compact `Move` button selects the card,
+then temporary placement targets appear between cards. This works for long methods without held-edge
+scrolling. Ingredient text remains the truth and changing it re-derives the scaling overlay. Tags
+stay on the same screen as a fixed checklist but save separately. Done returns to the ordinary recipe
+view; no edit metadata or history UI is added. The same editor opened empty covers typed-in recipes.

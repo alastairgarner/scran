@@ -8,6 +8,10 @@ workspaces. `bun run fix` applies the safe fixes.
 A `pre-commit` hook in `.githooks/` runs the same checks over staged files and blocks the commit
 if they fail. `bun install` wires it up.
 
+## Workflow
+
+Issues and specs live as Markdown under `tasks/<feature>/`. See `docs/agents/issue-tracker.md`.
+
 ## Agent skills
 
 ### Issue tracker

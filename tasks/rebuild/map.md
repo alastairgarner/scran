@@ -205,6 +205,13 @@ scale. Read it before naming anything.
   endpoints**. Search now ranks by **bm25** where there's a query. `PUT /tags` was built and removed
   — it is ticket 18's. **Unblocks 14, 15, 16, 17 and 21.**
 
+- [What does fixing a recipe look like?](issues/18-recipe-editor.md) — **a dedicated card editor**
+  behind the recipe screen's pencil: ingredients first, method second, one directly editable card per
+  line or step, and no method titles. Insert and delete happen on the cards. Reordering is **select,
+  scroll, place**, not drag and drop, so long mobile methods need no held-edge scrolling. Editing the
+  ingredient line re-derives its scaling overlay. Tags share the screen but remain a separate write;
+  typed-in recipes use the same editor empty. No edit metadata or history UI.
+
 ## Not yet specified
 
 <!--
