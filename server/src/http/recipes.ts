@@ -23,6 +23,14 @@ import * as recipes from '../recipes';
 /** A phone photograph, not a scan. Generous, and still a bound. */
 const MAX_PHOTO_BYTES = 25 * 1024 * 1024;
 
+const urlCaptureSchema = z.object({
+  url: z
+    .string()
+    .trim()
+    .url()
+    .refine(value => ['http:', 'https:'].includes(new URL(value).protocol)),
+});
+
 const idParam = zValidator(
   'param',
   z.object({ id: z.coerce.number().int().positive() }),
@@ -40,11 +48,23 @@ export const recipeRoutes = new Hono<AppEnv>()
   )
 
   /**
-   * Capture. Returns as soon as the photo is on disk — extraction runs behind
-   * the response and the client polls the status, so photographing the second
-   * page of a spread never waits on the model.
+   * Capture. Returns once the source is on disk — extraction runs behind the
+   * response and the client polls the status.
    */
   .post('/api/recipes', async c => {
+    if (c.req.header('content-type')?.startsWith('application/json')) {
+      const body = urlCaptureSchema.safeParse(
+        await c.req.json().catch(() => undefined),
+      );
+      if (!body.success) {
+        throw ClientError.validation('Send a valid HTTP URL.');
+      }
+
+      const { id } = await recipes.captureUrl(c.get('user').id, body.data.url);
+      void recipes.runExtraction(id);
+      return c.json({ id, status: 'pending' as const }, 202);
+    }
+
     const body = await c.req.parseBody();
     const photo = body.photo;
     if (!(photo instanceof File) || !photo.type.startsWith('image/')) {
@@ -54,7 +74,10 @@ export const recipeRoutes = new Hono<AppEnv>()
       throw ClientError.validation('That photo is too big.');
     }
 
-    const { id } = await recipes.capture(c.get('user').id, photo);
+    const { id } = await recipes.capture(c.get('user').id, {
+      kind: 'photo',
+      data: photo,
+    });
     // Deliberately floating: the row is the progress bar, and a failure lands
     // on it rather than on a request nobody is waiting for any more.
     void recipes.runExtraction(id);

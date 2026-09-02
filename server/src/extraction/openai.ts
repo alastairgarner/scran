@@ -1,7 +1,7 @@
 /**
  * The one module that talks to OpenAI. Everything about the wire — the URL,
  * the key, the message shape, structured outputs — stops here; `extract` above
- * it sees a function that takes a prompt and a photo and returns JSON text.
+ * it sees a function that takes a prompt and a source and returns JSON text.
  *
  * That is also the test seam ticket 05 asked for: `extract(source, deps)`
  * defaults `complete` to this and a test passes a recorded reply instead, with
@@ -23,8 +23,7 @@ export type Completion = {
 
 export type CompleteRequest = {
   prompt: string;
-  /** The photographed page. Ticket 14 adds the HTML arm beside it. */
-  photo: Blob;
+  source: { kind: 'photo'; photo: Blob } | { kind: 'html'; html: string };
 };
 
 export type Complete = (request: CompleteRequest) => Promise<Completion>;
@@ -38,14 +37,21 @@ export type Complete = (request: CompleteRequest) => Promise<Completion>;
  */
 const jsonSchema = z.toJSONSchema(extractionSchema, { target: 'draft-7' });
 
-const PROMPT_PATH = new URL(
+const IMAGE_PROMPT_PATH = new URL(
   './prompts/parse-recipe-image.txt',
   import.meta.url,
 );
 
-/** The prompt text, and a short digest of it stored on every version it produces. */
-export const prompt = await Bun.file(PROMPT_PATH).text();
-export const promptVersion = Bun.hash(prompt).toString(16).slice(0, 8);
+const HTML_PROMPT_PATH = new URL(
+  './prompts/parse-recipe-html.txt',
+  import.meta.url,
+);
+
+/** The two source-specific prompts. */
+export const prompts = {
+  photo: await Bun.file(IMAGE_PROMPT_PATH).text(),
+  html: await Bun.file(HTML_PROMPT_PATH).text(),
+};
 
 /**
  * One multimodal call.
@@ -55,8 +61,21 @@ export const promptVersion = Bun.hash(prompt).toString(16).slice(0, 8);
  *   was fine and the upstream wasn't, so the capture stays retryable.
  */
 export const complete: Complete = async request => {
-  const { photo } = request;
-  const base64 = Buffer.from(await photo.arrayBuffer()).toString('base64');
+  const content =
+    request.source.kind === 'photo'
+      ? [
+          {
+            type: 'text',
+            text: 'Please extract the recipe from the image provided. There should be exactly one recipe.',
+          },
+          {
+            type: 'image_url',
+            image_url: {
+              url: `data:${request.source.photo.type || 'image/jpeg'};base64,${Buffer.from(await request.source.photo.arrayBuffer()).toString('base64')}`,
+            },
+          },
+        ]
+      : `Extract exactly one recipe from this webpage HTML:\n\n${request.source.html}`;
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: {
@@ -77,21 +96,7 @@ export const complete: Complete = async request => {
       },
       messages: [
         { role: 'system', content: request.prompt },
-        {
-          role: 'user',
-          content: [
-            {
-              type: 'text',
-              text: 'Please extract the recipe from the image provided. There should be exactly one recipe.',
-            },
-            {
-              type: 'image_url',
-              image_url: {
-                url: `data:${photo.type || 'image/jpeg'};base64,${base64}`,
-              },
-            },
-          ],
-        },
+        { role: 'user', content },
       ],
     }),
   });

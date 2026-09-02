@@ -1,0 +1,45 @@
+{
+  "model": "gpt-4.1",
+  "usage": { "prompt_tokens": 6939, "completion_tokens": 1229 },
+  "recipe": {
+    "name": "Spaghetti alla Puttanesca",
+    "description": "Traditional Italian pasta from Naples with a pantry-based tomato, olive, caper and anchovy sauce.",
+    "recipe_yield": "2",
+    "yield_quantity": 2,
+    "yield_unit": null,
+    "total_time": "20 minutes",
+    "prep_time": "5 minutes",
+    "perform_time": "15 minutes",
+    "total_minutes": 20,
+    "time_estimated": false,
+    "tags": ["main", "pescatarian"],
+    "ingredients": [
+      { "title": null, "text": "200g / 7oz spaghetti", "quantity": 200, "unit": "g", "food": "spaghetti", "note": "or other long pasta" },
+      { "title": null, "text": "2 tbsp extra virgin olive oil", "quantity": 2, "unit": "tbsp", "food": "extra virgin olive oil", "note": "plus more for drizzling" },
+      { "title": null, "text": "2 garlic cloves", "quantity": 2, "unit": null, "food": "garlic cloves", "note": "finely minced" },
+      { "title": null, "text": "3 anchovy fillets", "quantity": 3, "unit": null, "food": "anchovy fillets", "note": "finely minced" },
+      { "title": null, "text": "1/4 cup pitted black olives", "quantity": 0.25, "unit": "cup", "food": "pitted black olives", "note": "quartered" },
+      { "title": null, "text": "1 tbsp capers", "quantity": 1, "unit": "tbsp", "food": "capers", "note": "drained" },
+      { "title": null, "text": "1/4 tsp chilli flakes", "quantity": 0.25, "unit": "tsp", "food": "chilli flakes", "note": null },
+      { "title": null, "text": "400g / 14oz can crushed tomato", "quantity": 400, "unit": "g", "food": "crushed tomato", "note": null },
+      { "title": null, "text": "1/2 cup water", "quantity": 0.5, "unit": "cup", "food": "water", "note": null },
+      { "title": null, "text": "1 tsp fresh oregano", "quantity": 1, "unit": "tsp", "food": "fresh oregano", "note": "roughly chopped" },
+      { "title": null, "text": "1/8 tsp kosher salt", "quantity": 0.125, "unit": "tsp", "food": "kosher salt", "note": null },
+      { "title": null, "text": "1/8 tsp black pepper", "quantity": 0.125, "unit": "tsp", "food": "black pepper", "note": null },
+      { "title": null, "text": "1/4 tsp sugar", "quantity": 0.25, "unit": "tsp", "food": "sugar", "note": "if needed" },
+      { "title": null, "text": "2 tbsp fresh basil", "quantity": 2, "unit": "tbsp", "food": "fresh basil", "note": "roughly chopped" }
+    ],
+    "instructions": [
+      { "title": null, "text": "Bring a large pot of water to the boil, ready for the pasta." },
+      { "title": null, "text": "Heat olive oil and briefly cook the garlic." },
+      { "title": null, "text": "Add anchovies, capers, olives and chilli flakes. Cook for 1 minute." },
+      { "title": null, "text": "Add tomato and water." },
+      { "title": null, "text": "Add oregano, salt and pepper, then simmer for 10 minutes." },
+      { "title": null, "text": "Cook the pasta according to packet directions." },
+      { "title": null, "text": "Reserve some pasta water, then drain the pasta." },
+      { "title": null, "text": "Toss the pasta with the sauce and enough pasta water to make it cling." },
+      { "title": null, "text": "Serve in warmed bowls with olive oil and basil." }
+    ],
+    "notes": []
+  }
+}

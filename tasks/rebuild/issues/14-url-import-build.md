@@ -1,7 +1,8 @@
 # Build URL import
 
 Type: task
-Status: open
+Status: resolved
+Reviewer: agent
 Blocked by: 13
 
 ## Question
@@ -24,3 +25,15 @@ Out of scope here: what a URL-sourced recipe looks like in a photo-shaped UI —
 waiting on ticket 06.
 
 Done when pasting a recipe URL produces a `ready` recipe whose source row holds the fetched HTML.
+
+## Answer
+
+Built URL capture through the existing asynchronous extraction path. It stores bounded raw HTML,
+pins validated public DNS addresses to prevent SSRF/rebinding, validates redirects and content type,
+and classifies upstream failures as retryable dependencies. Model input prefers WP Recipe Maker's
+structured card, then Recipe JSON-LD, recipe Microdata/RDFa, article, main and body; raw HTML never
+becomes the fallback payload. A separate prompt and recorded webpage result keep tests offline.
+
+Both requested live pages reached `ready`: Tuscan Pasta Salad and Spaghetti alla Puttanesca. Agent
+review completed with no findings after iteration. `bun run check` and all 69 tests pass. Broader
+format research is parked as [enhancement 03](../../enhancements/issues/03-recipe-website-formats.md).

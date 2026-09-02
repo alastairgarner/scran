@@ -165,6 +165,14 @@ describe('redeeming an invite', () => {
 });
 
 describe('looking an invite up', () => {
+  it('prints a URL for the registered invite route', () => {
+    const invitation = createInvite('linked@scran.test');
+
+    expect(new URL(invitation).pathname).toBe(
+      `/api/invites/${tokenFrom(invitation)}`,
+    );
+  });
+
   it('burns nothing, however many previewers fetch it', async () => {
     // Arrange
     const token = tokenFrom(createInvite('previewed@scran.test'));

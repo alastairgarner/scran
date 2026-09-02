@@ -4,6 +4,7 @@ import { db } from './db';
 import {
   addVersion,
   capture,
+  captureUrl,
   edit,
   ftsQuery,
   get,
@@ -14,6 +15,7 @@ import {
   softDelete,
   sweepStalePending,
 } from './recipes';
+import { readSource } from './storage';
 import { recordedComplete, signUpThroughInvite } from './testing';
 
 /** @returns {Promise<string>} A real user id, made the way the app makes them. */
@@ -72,7 +74,7 @@ describe('versions', () => {
   it('numbers from one and makes the highest current', async () => {
     // Arrange
     const userId = await person();
-    const { id } = await capture(userId, photo());
+    const { id } = await capture(userId, { kind: 'photo', data: photo() });
 
     // Act
     const first = addVersion(id, {
@@ -98,7 +100,7 @@ describe('deleting', () => {
     // Arrange
     const owner = await person();
     const someoneElse = await person();
-    const { id } = await capture(owner, photo());
+    const { id } = await capture(owner, { kind: 'photo', data: photo() });
     addVersion(id, { userId: owner, content: content('Panzanella') });
 
     // Act + Assert — anyone edits, only the creator deletes.
@@ -119,7 +121,7 @@ describe('search', () => {
   it('finds a recipe by its ingredients, and by a tag it never says', async () => {
     // Arrange
     const userId = await person();
-    const { id } = await capture(userId, photo());
+    const { id } = await capture(userId, { kind: 'photo', data: photo() });
     addVersion(id, { userId, content: content('Roast aubergine') });
     setTags(id, ['vegan']);
 
@@ -133,7 +135,7 @@ describe('search', () => {
   it('keeps the tags in the index when a later version rebuilds the row', async () => {
     // Arrange
     const userId = await person();
-    const { id } = await capture(userId, photo());
+    const { id } = await capture(userId, { kind: 'photo', data: photo() });
     addVersion(id, { userId, content: content('Dal') });
     setTags(id, ['vegetarian']);
 
@@ -146,10 +148,109 @@ describe('search', () => {
 });
 
 describe('capture', () => {
+  it('stores raw HTML and extracts it through the shared path', async () => {
+    // Arrange
+    const userId = await person();
+    const url = 'https://1.1.1.1/recipe';
+    const html = '<html><body>Chocolate chip muffins</body></html>';
+
+    // Act
+    const { id, sourceId } = await captureUrl(userId, url, {
+      request: async () =>
+        new Response(html, { headers: { 'content-type': 'text/html' } }),
+      lookup: async () => [],
+    });
+    await runExtraction(id, { complete: recordedComplete() });
+
+    // Assert
+    expect(get(id).status).toBe('ready');
+    const source = db
+      .query('SELECT kind, path, url FROM source WHERE id = ?')
+      .get(sourceId) as { kind: string; path: string; url: string };
+    expect(source).toMatchObject({ kind: 'html', url });
+    expect(await readSource(source.path).text()).toBe(html);
+  });
+
+  it('classifies webpage fetch failures as retryable dependencies', async () => {
+    // Arrange
+    const userId = await person();
+    const url = 'https://1.1.1.1/not-html';
+    const lookup = async () => [{ address: '1.1.1.1', family: 4 }];
+    let cancelled = 0;
+    const body = () =>
+      new ReadableStream({
+        cancel() {
+          cancelled++;
+        },
+      });
+
+    // Act
+    const nonHtml = await captureUrl(userId, url, {
+      request: async () =>
+        new Response(body(), {
+          headers: { 'content-type': 'text/plain' },
+        }),
+      lookup,
+    }).catch(error => error);
+    const unavailable = await captureUrl(userId, url, {
+      request: async () => new Response(body(), { status: 503 }),
+      lookup,
+    }).catch(error => error);
+
+    // Assert
+    expect(nonHtml).toMatchObject({ type: 'dependency', retryable: true });
+    expect(unavailable).toMatchObject({ type: 'dependency', retryable: true });
+    expect(cancelled).toBe(2);
+  });
+
+  it('refuses private targets, including after a redirect', async () => {
+    // Arrange
+    const userId = await person();
+    const requestPage = async () =>
+      new Response('', {
+        status: 302,
+        headers: { location: 'http://127.0.0.1/admin' },
+      });
+
+    // Act
+    const direct = await captureUrl(userId, 'http://127.0.0.1/admin', {
+      request: requestPage,
+      lookup: async () => [],
+    }).catch(error => error);
+    const redirected = await captureUrl(userId, 'https://1.1.1.1/recipe', {
+      request: requestPage,
+      lookup: async () => [],
+    }).catch(error => error);
+
+    // Assert
+    expect(direct).toMatchObject({ type: 'validation', status: 400 });
+    expect(redirected).toMatchObject({ type: 'dependency', status: 503 });
+  });
+
+  it('classifies a broken webpage stream as a dependency', async () => {
+    // Arrange
+    const userId = await person();
+    const body = new ReadableStream({
+      pull(controller) {
+        controller.error(new Error('connection dropped'));
+      },
+    });
+
+    // Act
+    const error = await captureUrl(userId, 'https://1.1.1.1/recipe', {
+      request: async () =>
+        new Response(body, { headers: { 'content-type': 'text/html' } }),
+      lookup: async () => [],
+    }).catch(cause => cause);
+
+    // Assert
+    expect(error).toMatchObject({ type: 'dependency', retryable: true });
+  });
+
   it('runs the model behind the request and lands a ready recipe', async () => {
     // Arrange
     const userId = await person();
-    const { id } = await capture(userId, photo());
+    const { id } = await capture(userId, { kind: 'photo', data: photo() });
     expect(get(id).status).toBe('pending');
 
     // Act
@@ -165,7 +266,7 @@ describe('capture', () => {
   it('leaves a failure retryable, and refuses to re-extract once there is content', async () => {
     // Arrange
     const userId = await person();
-    const { id } = await capture(userId, photo());
+    const { id } = await capture(userId, { kind: 'photo', data: photo() });
 
     // Act — the upstream falls over.
     await runExtraction(id, {
@@ -191,8 +292,11 @@ describe('sweepStalePending', () => {
   it('fails only the rows a restart could have stranded', async () => {
     // Arrange
     const userId = await person();
-    const stuck = await capture(userId, photo());
-    const justStarted = await capture(userId, photo());
+    const stuck = await capture(userId, { kind: 'photo', data: photo() });
+    const justStarted = await capture(userId, {
+      kind: 'photo',
+      data: photo(),
+    });
     // Aged by updatedAt, which is what "pending since" means — a retry moves
     // it, so a long-dead recipe gets its own ten minutes.
     db.run('UPDATE recipe SET updatedAt = ? WHERE id = ?', [
@@ -218,7 +322,7 @@ describe('sweepStalePending', () => {
   it('refuses a retry while one is already in flight', async () => {
     // Arrange
     const userId = await person();
-    const { id } = await capture(userId, photo());
+    const { id } = await capture(userId, { kind: 'photo', data: photo() });
 
     // Act + Assert — a second run would append a second version.
     expect(() => retry(id)).toThrow('still being read');

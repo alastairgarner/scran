@@ -76,6 +76,9 @@ _Nothing yet._
 - **Tag vocabulary drift.** The rebuild picked a closed list the model chooses from. Whether it's
   the right list, and what changing it does to already-tagged recipes, is a question with no answer
   until there are enough recipes to be annoyed by.
+- **[Recipe website formats](issues/03-recipe-website-formats.md).** URL import initially supports
+  WP Recipe Maker's structured card, Schema.org Recipe JSON-LD, Microdata/RDFa and visible-content
+  fallbacks. Research which other generators deserve direct support before growing the parser.
 
 ## Out of scope
 

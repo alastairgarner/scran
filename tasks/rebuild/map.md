@@ -211,6 +211,11 @@ scale. Read it before naming anything.
   scroll, place**, not drag and drop, so long mobile methods need no held-edge scrolling. Editing the
   ingredient line re-derives its scaling overlay. Tags share the screen but remain a separate write;
   typed-in recipes use the same editor empty. No edit metadata or history UI.
+- [Build URL import](issues/14-url-import-build.md) — **built through the same stored-source and
+  extraction path as photos.** Raw HTML is retained; model input prefers WP Recipe Maker's richer
+  structured card, then Recipe JSON-LD, Microdata/RDFa and progressively broader visible content.
+  Fetches are bounded and SSRF-safe across DNS and redirects. Both requested live sites reached
+  `ready`; broader format coverage is parked as enhancement 03.
 
 ## Not yet specified
 

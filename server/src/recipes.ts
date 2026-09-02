@@ -7,6 +7,11 @@
  *
  * No route below this file contains SQL or a permission `if`.
  */
+
+import { lookup } from 'node:dns/promises';
+import { request as httpRequest } from 'node:http';
+import { request as httpsRequest } from 'node:https';
+import { BlockList, isIP, type LookupFunction } from 'node:net';
 import type { Ingredient, RecipeContent, Section, TagId } from '@scran/shared';
 import { normaliseTags, TAGS } from '@scran/shared';
 import { db } from './db';
@@ -19,8 +24,56 @@ import { readSource, saveSource } from './storage';
 /** A capture is `pending` until the model answers, then `ready` or `failed`. */
 export type RecipeStatus = 'pending' | 'ready' | 'failed';
 
+type CaptureSource =
+  | { kind: 'photo'; data: Blob }
+  | { kind: 'html'; data: Blob; url: string };
+
 /** Long enough that a slow model finishes; short enough to unstick a restart. */
 const STALE_PENDING_MS = 10 * 60 * 1000;
+
+/** Plenty for recipe pages; bounded so an upstream cannot fill memory. */
+const MAX_HTML_BYTES = 2 * 1024 * 1024;
+
+const MAX_REDIRECTS = 5;
+
+const NON_PUBLIC_IPS = new BlockList();
+for (const [network, prefix, family] of [
+  ['0.0.0.0', 8, 'ipv4'],
+  ['10.0.0.0', 8, 'ipv4'],
+  ['100.64.0.0', 10, 'ipv4'],
+  ['127.0.0.0', 8, 'ipv4'],
+  ['169.254.0.0', 16, 'ipv4'],
+  ['172.16.0.0', 12, 'ipv4'],
+  ['192.0.0.0', 24, 'ipv4'],
+  ['192.0.2.0', 24, 'ipv4'],
+  ['192.168.0.0', 16, 'ipv4'],
+  ['198.18.0.0', 15, 'ipv4'],
+  ['198.51.100.0', 24, 'ipv4'],
+  ['203.0.113.0', 24, 'ipv4'],
+  ['224.0.0.0', 4, 'ipv4'],
+  ['240.0.0.0', 4, 'ipv4'],
+  ['::', 128, 'ipv6'],
+  ['::1', 128, 'ipv6'],
+  ['64:ff9b:1::', 48, 'ipv6'],
+  ['100::', 64, 'ipv6'],
+  ['2001:db8::', 32, 'ipv6'],
+  ['fc00::', 7, 'ipv6'],
+  ['fe80::', 10, 'ipv6'],
+  ['ff00::', 8, 'ipv6'],
+] as const) {
+  NON_PUBLIC_IPS.addSubnet(network, prefix, family);
+}
+
+type UrlDependencies = {
+  request: (
+    url: URL,
+    address: { address: string; family: number },
+  ) => Promise<Response>;
+  lookup: (
+    hostname: string,
+    options: { all: true; verbatim: true },
+  ) => Promise<{ address: string; family: number }[]>;
+};
 
 const now = () => new Date().toISOString();
 
@@ -98,13 +151,13 @@ export function ftsQuery(query: string): string {
 /**
  * Starts a capture: the recipe row and its source exist, `pending`, before the
  * model is called — so a failure anywhere after this is retryable from the
- * photo on disk rather than lost.
+ * source on disk rather than lost.
  *
  * @returns {Promise<{ id: number; sourceId: number }>} The new recipe.
  */
 export async function capture(
   userId: string,
-  image: Blob,
+  source: CaptureSource,
 ): Promise<{
   id: number;
   sourceId: number;
@@ -117,13 +170,19 @@ export async function capture(
          VALUES ('pending', ?, ?, ?) RETURNING id`,
       )
       .get(userId, at, at) as { id: number };
-    const source = db
+    const sourceRow = db
       .query(
-        `INSERT INTO source (recipeId, kind, createdAt, updatedAt)
-         VALUES (?, 'photo', ?, ?) RETURNING id`,
+        `INSERT INTO source (recipeId, kind, url, createdAt, updatedAt)
+         VALUES (?, ?, ?, ?, ?) RETURNING id`,
       )
-      .get(recipe.id, at, at) as { id: number };
-    return { id: recipe.id, sourceId: source.id };
+      .get(
+        recipe.id,
+        source.kind,
+        source.kind === 'html' ? source.url : null,
+        at,
+        at,
+      ) as { id: number };
+    return { id: recipe.id, sourceId: sourceRow.id };
   })();
 
   // The bytes land after the rows, so the key `storage` returns is written
@@ -131,7 +190,7 @@ export async function capture(
   // disk that refuses them fails the recipe on the spot rather than leaving it
   // pending for the boot sweep to find in ten minutes' time.
   try {
-    const key = await saveSource(sourceId, image);
+    const key = await saveSource(sourceId, source.data);
     db.run('UPDATE source SET path = ?, updatedAt = ? WHERE id = ?', [
       key,
       now(),
@@ -139,9 +198,221 @@ export async function capture(
     ]);
   } catch (cause) {
     setStatus(id, 'failed');
-    throw AppError.internal('Could not save that photo.', { id }, cause);
+    throw AppError.internal('Could not save that source.', { id }, cause);
   }
   return { id, sourceId };
+}
+
+/** Fetches and permanently stores a webpage before extraction starts. */
+export async function captureUrl(
+  userId: string,
+  url: string,
+  deps: UrlDependencies = { request: requestPinned, lookup },
+): Promise<{ id: number; sourceId: number }> {
+  const { response, finalUrl } = await fetchWebpage(url, deps);
+
+  if (!response.ok) {
+    await response.body?.cancel();
+    throw AppError.dependency('Could not fetch that webpage.', {
+      url,
+      status: response.status,
+    });
+  }
+
+  const contentType = response.headers.get('content-type')?.split(';')[0];
+  if (contentType?.trim().toLowerCase() !== 'text/html') {
+    await response.body?.cancel();
+    throw AppError.dependency('That URL did not return HTML.', {
+      url,
+      contentType,
+    });
+  }
+
+  return capture(userId, {
+    kind: 'html',
+    data: await readHtml(response, url),
+    url: finalUrl,
+  });
+}
+
+async function fetchWebpage(
+  input: string,
+  deps: UrlDependencies,
+): Promise<{ response: Response; finalUrl: string }> {
+  let url = input;
+  for (let redirects = 0; redirects <= MAX_REDIRECTS; redirects++) {
+    let target: Awaited<ReturnType<typeof requirePublicUrl>>;
+    try {
+      target = await requirePublicUrl(url, deps.lookup);
+    } catch (cause) {
+      if (redirects > 0 && cause instanceof ClientError) {
+        throw AppError.dependency(
+          'That webpage redirected to a private address.',
+          { url },
+          cause,
+        );
+      }
+      throw cause;
+    }
+
+    let response: Response;
+    try {
+      response = await deps.request(target.url, target.address);
+    } catch (cause) {
+      throw AppError.dependency(
+        'Could not fetch that webpage.',
+        { url: target.url.href },
+        cause,
+      );
+    }
+
+    if (![301, 302, 303, 307, 308].includes(response.status)) {
+      return { response, finalUrl: target.url.href };
+    }
+
+    await response.body?.cancel();
+    const location = response.headers.get('location');
+    if (!location) {
+      throw AppError.dependency('That webpage redirected nowhere.', {
+        url: target.url.href,
+      });
+    }
+    try {
+      url = new URL(location, target.url).href;
+    } catch (cause) {
+      throw AppError.dependency(
+        'That webpage returned a broken redirect.',
+        { url: target.url.href, location },
+        cause,
+      );
+    }
+  }
+
+  throw AppError.dependency('That webpage redirected too many times.', {
+    url: input,
+  });
+}
+
+async function requirePublicUrl(
+  input: string,
+  resolve: UrlDependencies['lookup'],
+): Promise<{ url: URL; address: { address: string; family: number } }> {
+  const url = new URL(input);
+  if (
+    !['http:', 'https:'].includes(url.protocol) ||
+    url.username !== '' ||
+    url.password !== ''
+  ) {
+    throw ClientError.validation('Send a public HTTP URL.');
+  }
+
+  const hostname = url.hostname.replace(/^\[|\]$/g, '');
+  const literalFamily = isIP(hostname);
+  let addresses: { address: string; family: number }[];
+  try {
+    addresses = literalFamily
+      ? [{ address: hostname, family: literalFamily }]
+      : await resolve(hostname, { all: true, verbatim: true });
+  } catch (cause) {
+    throw AppError.dependency(
+      'Could not resolve that webpage.',
+      { hostname },
+      cause,
+    );
+  }
+
+  if (
+    addresses.length === 0 ||
+    addresses.some(({ address, family }) =>
+      NON_PUBLIC_IPS.check(address, family === 4 ? 'ipv4' : 'ipv6'),
+    )
+  ) {
+    throw ClientError.validation('Send a public HTTP URL.');
+  }
+  return { url, address: addresses[0] };
+}
+
+function requestPinned(
+  url: URL,
+  address: { address: string; family: number },
+): Promise<Response> {
+  return new Promise((resolve, reject) => {
+    const pinnedLookup: LookupFunction = (_hostname, options, callback) => {
+      callback(null, options.all ? [address] : address.address, address.family);
+    };
+    const request = (url.protocol === 'https:' ? httpsRequest : httpRequest)(
+      url,
+      {
+        headers: { accept: 'text/html' },
+        lookup: pinnedLookup,
+        signal: AbortSignal.timeout(15_000),
+      },
+      incoming => {
+        const status = incoming.statusCode;
+        if (!status || status < 200 || status > 599) {
+          incoming.destroy();
+          reject(new Error(`Unsupported HTTP status: ${status}`));
+          return;
+        }
+        const headers = new Headers();
+        for (let index = 0; index < incoming.rawHeaders.length; index += 2) {
+          headers.append(
+            incoming.rawHeaders[index],
+            incoming.rawHeaders[index + 1],
+          );
+        }
+        if ([204, 205, 304].includes(status)) {
+          incoming.resume();
+          resolve(new Response(null, { status, headers }));
+          return;
+        }
+        const body = new ReadableStream<Uint8Array>({
+          start(controller) {
+            incoming.on('data', chunk => controller.enqueue(chunk));
+            incoming.on('end', () => controller.close());
+            incoming.on('error', error => controller.error(error));
+          },
+          cancel() {
+            incoming.destroy();
+          },
+        });
+        resolve(new Response(body, { status, headers }));
+      },
+    );
+    request.on('error', reject);
+    request.end();
+  });
+}
+
+async function readHtml(response: Response, url: string): Promise<Blob> {
+  const reader = response.body?.getReader();
+  if (!reader) {
+    throw AppError.dependency('That webpage had no content.', { url });
+  }
+
+  const bytes = new Uint8Array(MAX_HTML_BYTES);
+  let size = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) {
+        break;
+      }
+      if (size + value.byteLength > MAX_HTML_BYTES) {
+        await reader.cancel();
+        throw AppError.dependency('That webpage is too large.', { url });
+      }
+      bytes.set(value, size);
+      size += value.byteLength;
+    }
+  } catch (cause) {
+    if (cause instanceof AppError) {
+      throw cause;
+    }
+    throw AppError.dependency('Could not read that webpage.', { url }, cause);
+  }
+
+  return new Blob([bytes.slice(0, size)], { type: 'text/html' });
 }
 
 /**
@@ -156,15 +427,21 @@ export async function runExtraction(
   try {
     const source = db
       .query(
-        `SELECT id, path FROM source WHERE recipeId = ? ORDER BY id LIMIT 1`,
+        `SELECT id, kind, path FROM source
+         WHERE recipeId = ? ORDER BY id LIMIT 1`,
       )
-      .get(recipeId) as { id: number; path: string | null } | undefined;
+      .get(recipeId) as
+      | { id: number; kind: 'photo' | 'html'; path: string | null }
+      | undefined;
     if (!source?.path) {
       throw AppError.invariant('A pending recipe has no source.', { recipeId });
     }
 
+    const file = readSource(source.path);
     const extracted = await extract(
-      { kind: 'photo', photo: readSource(source.path) },
+      source.kind === 'photo'
+        ? { kind: 'photo', photo: file }
+        : { kind: 'html', html: await file.text() },
       deps,
     );
     db.transaction(() => {
@@ -567,7 +844,7 @@ export function deleteComment(commentId: number, userId: string): void {
 /**
  * A restart mid-extraction strands a row at `pending` forever, because the
  * promise that would have finished it died with the process. Run at boot:
- * anything stuck becomes `failed`, which is retryable from the photo on disk.
+ * anything stuck becomes `failed`, which is retryable from the source on disk.
  *
  * @returns {number} How many rows were unstuck.
  */

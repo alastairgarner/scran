@@ -2,6 +2,7 @@ import { describe, expect, it } from 'bun:test';
 import { extractionSchema } from '@scran/shared';
 import { AppError } from '../errors';
 import { RECORDED_PHOTOS, recordedComplete } from '../testing';
+import webpage from './fixtures/webpage.json';
 import { extract } from './index';
 
 const photo = new Blob([new Uint8Array([1, 2, 3])], { type: 'image/jpeg' });
@@ -9,7 +10,14 @@ const source = { kind: 'photo' as const, photo };
 
 /** @returns {Promise<Record<string, unknown>>} The first recorded reply, parsed. */
 const recordedRecipe = async () =>
-  JSON.parse((await recordedComplete()({ prompt: '', photo })).json);
+  JSON.parse(
+    (
+      await recordedComplete()({
+        prompt: '',
+        source: { kind: 'photo', photo },
+      })
+    ).json,
+  );
 
 describe('extract', () => {
   it('maps a real reply onto the stored shape', async () => {
@@ -31,6 +39,76 @@ describe('extract', () => {
     expect(result.model).toBe('gpt-4.1');
     expect(result.promptVersion).toMatch(/^[0-9a-f]+$/);
     expect(result.tokensIn).toBeGreaterThan(0);
+  });
+
+  it('uses the webpage prompt and recorded response for HTML', async () => {
+    // Arrange
+    const recipe = '{"@type":"Recipe","name":"Chocolate chip muffins"}';
+    const html = `<html><nav>lots of noise</nav><script type="application/ld+json">${recipe}</script></html>`;
+    let prompt = '';
+    let sent = '';
+
+    // Act
+    const result = await extract(
+      { kind: 'html', html },
+      {
+        complete: request => {
+          prompt = request.prompt;
+          sent = request.source.kind === 'html' ? request.source.html : '';
+          return Promise.resolve({
+            model: webpage.model,
+            json: JSON.stringify(webpage.recipe),
+            tokensIn: webpage.usage.prompt_tokens,
+            tokensOut: webpage.usage.completion_tokens,
+          });
+        },
+      },
+    );
+
+    // Assert
+    expect(prompt).toContain('webpage data');
+    expect(sent).toBe(`[${recipe}]`);
+    expect(result.content.name).toBe('Spaghetti alla Puttanesca');
+  });
+
+  it('falls back through recipe microdata before visible article text', async () => {
+    // Arrange
+    const html = `<html><script type="application/ld+json">{"@type":"BreadcrumbList"}</script><body><article>Wrong article</article><section itemtype="https://schema.org/Recipe"><h1>Right recipe</h1><p>2 eggs</p></section></body></html>`;
+    const recorded = recordedComplete();
+    let sent = '';
+
+    // Act
+    await extract(
+      { kind: 'html', html },
+      {
+        complete: request => {
+          sent = request.source.kind === 'html' ? request.source.html : '';
+          return recorded(request);
+        },
+      },
+    );
+
+    // Assert
+    expect(sent).toBe('Right recipe 2 eggs');
+  });
+
+  it('prefers a structured recipe card over flattened JSON-LD', async () => {
+    const html = `<script type="application/ld+json">{"@type":"Recipe","recipeIngredient":["2 eggs"]}</script><div class="wprm-recipe-container"><span class="wprm-recipe-ingredient-amount">2</span><span class="wprm-recipe-ingredient-name">eggs</span></div>`;
+    const recorded = recordedComplete();
+    let sent = '';
+
+    await extract(
+      { kind: 'html', html },
+      {
+        complete: request => {
+          sent = request.source.kind === 'html' ? request.source.html : '';
+          return recorded(request);
+        },
+      },
+    );
+
+    expect(sent).toContain('wprm-recipe-ingredient-amount');
+    expect(sent).not.toContain('recipeIngredient');
   });
 
   it('normalises the diet implication the model may forget', async () => {
@@ -91,8 +169,12 @@ describe('the recorded fixtures', () => {
     // A fixture recorded against an older prompt is a test that passes while
     // the real thing is broken — this is the guard against that.
     for (const name of RECORDED_PHOTOS) {
-      const { json } = await recordedComplete(name)({ prompt: '', photo });
+      const { json } = await recordedComplete(name)({
+        prompt: '',
+        source: { kind: 'photo', photo },
+      });
       expect(extractionSchema.safeParse(JSON.parse(json)).success).toBe(true);
     }
+    expect(extractionSchema.safeParse(webpage.recipe).success).toBe(true);
   });
 });

@@ -96,6 +96,20 @@ describe('the recipe API', () => {
     expect((await served.arrayBuffer()).byteLength).toBe(4);
   });
 
+  it('refuses a private URL before fetching it', async () => {
+    // Arrange
+    const request = await asPerson();
+
+    // Act
+    const response = await request(
+      '/api/recipes',
+      json({ url: 'http://127.0.0.1/private' }),
+    );
+
+    // Assert
+    expect(response.status).toBe(400);
+  });
+
   it('refuses anything that is not a photo, before anything is created', async () => {
     // Arrange
     const request = await asPerson();

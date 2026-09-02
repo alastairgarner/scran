@@ -57,15 +57,14 @@ export async function withoutOpenAI<T>(
   const entry = (recorded as Recorded)[photo];
   const real = globalThis.fetch;
   globalThis.fetch = (async (input: string | URL | Request) => {
-    if (
-      !String(input instanceof Request ? input.url : input).includes('openai')
-    ) {
-      throw new Error(`Unexpected fetch to ${String(input)} in a test`);
+    const url = String(input instanceof Request ? input.url : input);
+    if (url.includes('openai')) {
+      return Response.json({
+        choices: [{ message: { content: JSON.stringify(entry.recipe) } }],
+        usage: { prompt_tokens: 1, completion_tokens: 1 },
+      });
     }
-    return Response.json({
-      choices: [{ message: { content: JSON.stringify(entry.recipe) } }],
-      usage: { prompt_tokens: 1, completion_tokens: 1 },
-    });
+    throw new Error(`Unexpected fetch to ${url} in a test`);
   }) as typeof fetch;
   try {
     return await run();
