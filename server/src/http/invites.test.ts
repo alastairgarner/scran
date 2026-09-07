@@ -2,6 +2,7 @@ import { describe, expect, it } from 'bun:test';
 import { Hono } from 'hono';
 import type { AppEnv } from '../auth';
 import { auth, createInvite, requireUser } from '../auth';
+import { config } from '../config';
 import { db } from '../db';
 import { errorHandler } from '../errors';
 import { app } from '../index';
@@ -143,7 +144,7 @@ describe('redeeming an invite', () => {
       method: 'POST',
       headers: {
         'content-type': 'text/plain',
-        origin: 'http://localhost:3000',
+        origin: config.baseUrl,
       },
       body: JSON.stringify(person),
     });
@@ -165,11 +166,11 @@ describe('redeeming an invite', () => {
 });
 
 describe('looking an invite up', () => {
-  it('prints a URL for the registered invite route', () => {
+  it('prints a URL for the client signup route', () => {
     const invitation = createInvite('linked@scran.test');
 
     expect(new URL(invitation).pathname).toBe(
-      `/api/invites/${tokenFrom(invitation)}`,
+      `/invite/${tokenFrom(invitation)}`,
     );
   });
 

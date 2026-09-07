@@ -111,7 +111,7 @@ export function createInvite(email?: string, createdByUserId?: string): string {
       now.toISOString(),
     ],
   );
-  return `${config.baseUrl}/api/invites/${token}`;
+  return `${config.baseUrl}/invite/${token}`;
 }
 
 /**

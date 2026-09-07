@@ -216,6 +216,10 @@ scale. Read it before naming anything.
   structured card, then Recipe JSON-LD, Microdata/RDFa and progressively broader visible content.
   Fetches are bounded and SSRF-safe across DNS and redirects. Both requested live sites reached
   `ready`; broader format coverage is parked as enhancement 03.
+- [Build the client](issues/21-client-build.md) — **built**: invite signup and sign-in, searchable
+  catalogue with URL-owned filters, photo/URL capture with polling, the cooking-first recipe screen,
+  scaling, ratings and comments. React Router 7, TanStack Query and react-hook-form own the three
+  state kinds ticket 05 assigned them. Invite links open the client route; agent review passed.
 
 ## Not yet specified
 

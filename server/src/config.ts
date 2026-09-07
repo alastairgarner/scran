@@ -21,7 +21,7 @@ const envSchema = z.object({
     .enum(['trace', 'debug', 'info', 'warn', 'error', 'fatal'])
     .default('info'),
   PORT: z.coerce.number().int().positive().default(3000),
-  BASE_URL: z.url().default('http://localhost:3000'),
+  BASE_URL: z.url().default('http://localhost:5173'),
   // Signs the session cookie. A leaked database replays as 401 without it, so
   // it is the one secret that must not be backed up beside `scran.db`.
   AUTH_SECRET: z.string().min(32),

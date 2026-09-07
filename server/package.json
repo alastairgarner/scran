@@ -1,6 +1,9 @@
 {
   "name": "@scran/server",
   "private": true,
+  "exports": {
+    ".": "./src/index.ts"
+  },
   "scripts": {
     "dev": "bun --watch --env-file=../.env src/index.ts",
     "typecheck": "tsc --noEmit"

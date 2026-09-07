@@ -36,7 +36,7 @@ describe('parseConfig', () => {
       openaiModel: 'gpt-5',
       logLevel: 'info',
       port: 3000,
-      baseUrl: 'http://localhost:3000',
+      baseUrl: 'http://localhost:5173',
       cookieSecure: false,
     });
   });

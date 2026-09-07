@@ -1,7 +1,8 @@
 # Build the client
 
 Type: task
-Status: open
+Status: resolved
+Reviewer: agent
 Blocked by: 06, 12, 13
 
 ## Question
@@ -72,3 +73,12 @@ scaling — only its note isn't. So the marker rule takes a second clause:
 `"or 200g frozen kernels"` is flagged; `"finely chopped"` is not. One rule, no new UI concept, and it
 closes the hole without a schema change. The proper fix — alternatives that each scale — is deferred
 to [the post-launch map](../../enhancements/issues/02-alternative-amounts.md).
+
+## Answer
+
+Built the authenticated client: catalogue search/filter/sort, photo and URL capture with polling,
+invite signup and sign-in, cooking-first recipe view, ingredient scaling, ratings and comments.
+TanStack Query, React Router 7 and react-hook-form follow ticket 05; the Tailwind token system follows
+ticket 03. Invite links now open the client signup route. Agent review completed clean after fixes.
+
+`bun run check`, all 73 tests and the production client build pass.

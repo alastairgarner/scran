@@ -1,31 +1,32 @@
 # scran
 
-Photograph a cookbook page, get a structured recipe back, browse it. Local-only prototype.
+A self-hosted family recipe catalogue. Photograph a cookbook page or paste a URL; a model turns it
+into a recipe the household can read, rate and correct.
 
 ## Running it
 
 ```sh
 bun install
-cp .env.template .env   # then fill in OPENAI_API_KEY
-bun dev
+cp .env.template .env
+# Fill in OPENAI_API_KEY and AUTH_SECRET, then:
+bun run dev
 ```
 
 - client: http://localhost:5173 (Vite, proxies `/api` to the server)
 - server: http://localhost:3000 (Hono on Bun)
 
-## Capturing a recipe
+## First sign-in
 
-Open the client and tap **Photograph a recipe**, or:
+Accounts are invite-only. With the app running:
 
 ```sh
-curl -F photo=@page.jpg http://localhost:3000/api/extract
+bun run invite you@example.com
 ```
 
-Saves the photo under `data/photos/`, stores the model's JSON verbatim in `data/scran.db`, and
-returns it plus token usage. Errors come back raw (message + stack) on purpose.
+Open the printed URL, create the account, then use its email and password on later sign-ins.
 
-- `GET /api/recipes` — the catalogue
-- `GET /api/recipes/:id` — one recipe, `data` being the model's JSON
+From the catalogue, use **+** to photograph a page or import a recipe URL. The new row appears
+immediately while extraction runs.
 
 ## Layout
 

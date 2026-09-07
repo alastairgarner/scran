@@ -7,7 +7,7 @@
     "client"
   ],
   "scripts": {
-    "dev": "bun run --filter '*' dev",
+    "dev": "bun run --filter '*' --parallel dev",
     "invite": "bun --env-file=.env server/src/cli/invite.ts",
     "test": "bun test",
     "check": "biome check . && bun run --filter '*' typecheck",
