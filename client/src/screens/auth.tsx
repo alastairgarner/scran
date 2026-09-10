@@ -3,6 +3,7 @@ import { type SignUp, signUpSchema } from '@scran/shared';
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Navigate, useNavigate, useParams } from 'react-router';
+
 import { errorMessage } from '../api/client';
 import { authClient } from '../auth';
 import { Button, Card, Field } from '../ui';
@@ -39,12 +40,12 @@ export function SignIn() {
       return;
     }
     await session.refetch();
-    navigate('/');
+    void navigate('/');
   });
 
   return (
     <AuthShell title="Welcome back">
-      <form className="space-y-4" onSubmit={submit}>
+      <form className="space-y-4" onSubmit={event => void submit(event)}>
         <Field
           label="Email"
           type="email"
@@ -59,7 +60,7 @@ export function SignIn() {
           error={form.formState.errors.password?.message}
           {...form.register('password', { required: 'Enter your password.' })}
         />
-        {error && <p className="text-sm text-veto">{error}</p>}
+        {error && <p className="type-label text-danger">{error}</p>}
         <Button className="w-full" disabled={form.formState.isSubmitting}>
           {form.formState.isSubmitting ? 'Signing in…' : 'Sign in'}
         </Button>
@@ -79,7 +80,7 @@ export function Invite() {
   const form = useForm<SignUp>({ resolver: zodResolver(signUpSchema) });
 
   useEffect(() => {
-    fetch(`/api/invites/${encodeURIComponent(token)}`)
+    void fetch(`/api/invites/${encodeURIComponent(token)}`)
       .then(async response => {
         if (response.status === 404) {
           setDead(true);
@@ -124,7 +125,7 @@ export function Invite() {
         return;
       }
       await session.refetch();
-      navigate('/');
+      void navigate('/');
     } catch (cause) {
       setError(
         cause instanceof Error ? cause.message : 'Could not join scran.',
@@ -148,7 +149,7 @@ export function Invite() {
 
   return (
     <AuthShell title="Join scran">
-      <form className="space-y-4" onSubmit={submit}>
+      <form className="space-y-4" onSubmit={event => void submit(event)}>
         <Field
           label="Name"
           autoComplete="name"
@@ -169,7 +170,7 @@ export function Invite() {
           error={form.formState.errors.password?.message}
           {...form.register('password')}
         />
-        {error && <p className="text-sm text-veto">{error}</p>}
+        {error && <p className="type-label text-danger">{error}</p>}
         <Button className="w-full" disabled={form.formState.isSubmitting}>
           {form.formState.isSubmitting ? 'Joining…' : 'Create account'}
         </Button>
@@ -188,12 +189,8 @@ function AuthShell({
   return (
     <main className="mx-auto flex min-h-dvh max-w-md items-center p-4">
       <Card className="w-full p-6">
-        <p className="font-bold font-display text-accent text-sm uppercase tracking-widest">
-          scran
-        </p>
-        <h1 className="mt-2 mb-6 font-bold font-display text-3xl tracking-display">
-          {title}
-        </h1>
+        <p className="type-label text-accent font-bold uppercase">scran</p>
+        <h1 className="type-title mt-2 mb-6 font-bold">{title}</h1>
         {children}
       </Card>
     </main>
@@ -202,7 +199,7 @@ function AuthShell({
 
 function PageMessage({ children }: { children: React.ReactNode }) {
   return (
-    <main className="grid min-h-dvh place-items-center p-6 text-center text-ink-muted">
+    <main className="text-ink-muted grid min-h-dvh place-items-center p-6 text-center">
       <p>{children}</p>
     </main>
   );

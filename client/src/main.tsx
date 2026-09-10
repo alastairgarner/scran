@@ -2,10 +2,12 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Route, Routes } from 'react-router';
+
 import { Invite, RequireAuth, SignIn } from './screens/auth';
 import { Capture } from './screens/capture';
 import { Catalogue } from './screens/catalogue';
 import { Recipe } from './screens/recipe';
+
 import './theme.css';
 
 const queryClient = new QueryClient();

@@ -10,6 +10,7 @@
 import type { ErrorHandler } from 'hono';
 import { HTTPException } from 'hono/http-exception';
 import type { ContentfulStatusCode } from 'hono/utils/http-status';
+
 import { logger } from './logger';
 
 /** How loudly the logger should treat an error. `ignored` is never logged. */

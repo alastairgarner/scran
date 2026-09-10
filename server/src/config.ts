@@ -1,4 +1,5 @@
 import { join } from 'node:path';
+
 import { z } from 'zod';
 
 // The defaults are the laptop layout, anchored to the repo rather than to the

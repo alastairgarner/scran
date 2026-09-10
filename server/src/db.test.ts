@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it } from 'bun:test';
 import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+
 import { migrate } from './db';
 
 /** @returns {string} A throwaway migrations directory holding `files`. */

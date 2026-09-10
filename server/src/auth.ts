@@ -7,9 +7,11 @@
  * works; routes get `requireUser` and the two invite functions.
  */
 import { createHash, randomBytes } from 'node:crypto';
+
 import { betterAuth } from 'better-auth';
 import { getMigrations } from 'better-auth/db/migration';
 import type { MiddlewareHandler } from 'hono';
+
 import { config } from './config';
 import { db } from './db';
 import { AppError, ClientError } from './errors';

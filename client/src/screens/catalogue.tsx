@@ -1,6 +1,7 @@
 import { TAGS, type TagId } from '@scran/shared';
 import { useQuery } from '@tanstack/react-query';
 import { Link, useSearchParams } from 'react-router';
+
 import { listRecipes, type RecipeSummary, recipeKeys } from '../api/recipes';
 import { authClient } from '../auth';
 import { aggregate, matchesSpeed, type Speed } from '../recipe-logic';
@@ -94,12 +95,12 @@ export function Catalogue() {
         onChange={event => update('q', event.target.value)}
         placeholder="Search recipes and ingredients…"
         aria-label="Search recipes"
-        className="min-h-12 min-w-0 flex-1 rounded-pill border border-line bg-surface px-4 outline-none focus:border-accent"
+        className="rounded-pill border-line bg-background focus:border-accent min-h-12 min-w-0 flex-1 border px-4 outline-none"
       />
       <button
         type="button"
         onClick={() => update('filters', 'open')}
-        className={`min-h-12 rounded-pill border-2 px-4 font-semibold ${active ? 'border-accent bg-accent text-accent-ink' : 'border-line text-ink-muted'}`}
+        className={`rounded-pill min-h-12 border-2 px-4 font-semibold ${active ? 'border-accent bg-accent text-accent-ink' : 'border-line text-ink-muted'}`}
       >
         Filter{active ? ` · ${active}` : ''}
       </button>
@@ -107,18 +108,16 @@ export function Catalogue() {
   );
 
   return (
-    <main className="mx-auto max-w-3xl pb-40 md:pb-8">
-      <header className="px-4 pt-5 md:sticky md:top-0 md:z-10 md:border-line md:border-b md:bg-surface/95 md:pb-3 md:backdrop-blur">
+    <main className="bottom-clearance mx-auto max-w-3xl md:pb-8">
+      <header className="md:border-line md:bg-background/95 px-4 pt-6 md:sticky md:top-0 md:z-10 md:border-b md:pb-3 md:backdrop-blur">
         <div className="flex items-center justify-between gap-4">
-          <h1 className="font-bold font-display text-3xl tracking-display">
-            scran
-          </h1>
-          <span className="ml-auto text-ink-muted text-sm">
+          <h1 className="type-title font-bold">scran</h1>
+          <span className="type-label text-ink-muted ml-auto">
             {visible.length} {visible.length === 1 ? 'recipe' : 'recipes'}
           </span>
           <Link
             to="/capture"
-            className="hidden rounded-pill bg-accent px-4 py-2 font-semibold text-accent-ink md:block"
+            className="rounded-pill bg-accent text-accent-ink hidden px-4 py-2 font-semibold md:block"
           >
             + Add recipe
           </Link>
@@ -155,10 +154,10 @@ export function Catalogue() {
       )}
 
       {recipes.isPending && (
-        <p className="p-10 text-center text-ink-muted">Loading recipes…</p>
+        <p className="text-ink-muted p-12 text-center">Loading recipes…</p>
       )}
       {recipes.error && (
-        <p className="p-10 text-center text-veto">{recipes.error.message}</p>
+        <p className="text-danger p-12 text-center">{recipes.error.message}</p>
       )}
       {!recipes.isPending && !recipes.error && (
         <ul>
@@ -168,19 +167,19 @@ export function Catalogue() {
               <li key={recipe.id}>
                 <Link
                   to={`/recipes/${recipe.id}`}
-                  className="flex min-h-20 items-center gap-4 border-line border-b px-4 py-4"
+                  className="border-line flex min-h-20 items-center gap-4 border-b px-4 py-4"
                 >
                   <div className="min-w-0 flex-1">
-                    <p className="font-display font-semibold text-xl leading-snug tracking-display">
+                    <p className="type-body font-semibold">
                       {recipe.name ?? statusName(recipe.status)}
                     </p>
-                    <p className="mt-1 truncate text-ink-muted text-sm">
+                    <p className="type-label text-ink-muted mt-1 truncate">
                       {summary(recipe)}
                     </p>
                   </div>
                   {mark && (
                     <span
-                      className={`shrink-0 text-xl ${mark === 1 ? 'text-veto' : 'text-praise'}`}
+                      className={`type-body shrink-0 ${mark === 1 ? 'text-danger' : 'text-success'}`}
                     >
                       {GLYPH[mark]}
                     </span>
@@ -190,20 +189,20 @@ export function Catalogue() {
             );
           })}
           {visible.length === 0 && (
-            <li className="p-10 text-center text-ink-muted">
+            <li className="text-ink-muted p-12 text-center">
               Nothing matches.
             </li>
           )}
         </ul>
       )}
 
-      <div className="fixed inset-x-0 bottom-0 z-20 border-line border-t bg-raised px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] md:hidden">
+      <div className="bottom-safe border-line bg-panel fixed inset-x-0 bottom-0 z-20 border-t px-4 pt-3 md:hidden">
         {controls}
       </div>
       <Link
         to="/capture"
         aria-label="Add a recipe"
-        className="fixed right-4 bottom-24 z-30 grid h-16 w-16 place-items-center rounded-pill bg-accent text-3xl text-accent-ink shadow-card md:hidden"
+        className="type-title rounded-pill bg-accent text-accent-ink shadow-card fixed right-4 bottom-24 z-30 grid h-16 w-16 place-items-center md:hidden"
       >
         +
       </Link>
@@ -213,14 +212,12 @@ export function Catalogue() {
         label="Filter and sort recipes"
         onClose={() => update('filters')}
       >
-        <div className="p-5 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
+        <div className="bottom-safe-roomy p-6">
           <div className="flex items-baseline justify-between">
-            <h2 className="font-bold font-display text-xl tracking-display">
-              Filter &amp; sort
-            </h2>
+            <h2 className="type-body font-bold">Filter &amp; sort</h2>
             <button
               type="button"
-              className="min-h-11 text-ink-muted text-sm underline"
+              className="type-label text-ink-muted min-h-11 underline"
               onClick={() => {
                 const next = new URLSearchParams();
                 if (query) {
@@ -294,7 +291,7 @@ export function Catalogue() {
           <button
             type="button"
             onClick={() => update('filters')}
-            className="mt-6 min-h-12 w-full rounded-pill bg-accent px-4 font-semibold text-accent-ink"
+            className="rounded-pill bg-accent text-accent-ink mt-6 min-h-12 w-full px-4 font-semibold"
           >
             Show {visible.length} {visible.length === 1 ? 'recipe' : 'recipes'}
           </button>
@@ -356,7 +353,7 @@ function FilterGroup({
 }) {
   return (
     <section>
-      <h3 className="mt-5 font-bold text-ink-muted text-sm uppercase tracking-wide">
+      <h3 className="type-label text-ink-muted mt-6 font-bold uppercase">
         {title}
       </h3>
       <div className="mt-2 flex flex-wrap gap-2">{children}</div>
@@ -377,7 +374,7 @@ function Chip({
     <button
       type="button"
       onClick={onClick}
-      className={`min-h-11 rounded-pill border px-3 py-2 text-sm ${active ? 'border-accent bg-accent text-accent-ink' : 'border-line text-ink-muted'}`}
+      className={`type-label rounded-pill min-h-11 border px-3 py-2 ${active ? 'border-accent bg-accent text-accent-ink' : 'border-line text-ink-muted'}`}
     >
       {children}
     </button>
@@ -395,7 +392,7 @@ function ActiveChip({
     <button
       type="button"
       onClick={onClick}
-      className="min-h-10 shrink-0 rounded-pill bg-accent px-3 py-2 text-accent-ink text-sm"
+      className="type-label rounded-pill bg-accent text-accent-ink min-h-10 shrink-0 px-3 py-2"
     >
       {children}
     </button>

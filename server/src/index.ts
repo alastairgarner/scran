@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { csrf } from 'hono/csrf';
 import { requestId } from 'hono/request-id';
+
 import { auth, migrateAuth } from './auth';
 import { config } from './config';
 import { db, migrate } from './db';

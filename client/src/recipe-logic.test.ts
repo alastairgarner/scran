@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'bun:test';
+
 import { aggregate, matchesSpeed, scaledIngredient } from './recipe-logic';
 
 describe('client recipe rules', () => {

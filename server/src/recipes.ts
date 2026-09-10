@@ -12,8 +12,10 @@ import { lookup } from 'node:dns/promises';
 import { request as httpRequest } from 'node:http';
 import { request as httpsRequest } from 'node:https';
 import { BlockList, isIP, type LookupFunction } from 'node:net';
+
 import type { Ingredient, RecipeContent, Section, TagId } from '@scran/shared';
 import { normaliseTags, TAGS } from '@scran/shared';
+
 import { db } from './db';
 import { AppError, ClientError } from './errors';
 import { extract } from './extraction';
@@ -368,7 +370,9 @@ function requestPinned(
         }
         const body = new ReadableStream<Uint8Array>({
           start(controller) {
-            incoming.on('data', chunk => controller.enqueue(chunk));
+            incoming.on('data', (chunk: Uint8Array) =>
+              controller.enqueue(chunk),
+            );
             incoming.on('end', () => controller.close());
             incoming.on('error', error => controller.error(error));
           },

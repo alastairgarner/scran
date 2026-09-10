@@ -10,11 +10,13 @@
     "dev": "bun run --filter '*' --parallel dev",
     "invite": "bun --env-file=.env server/src/cli/invite.ts",
     "test": "bun test",
-    "check": "biome check . && bun run --filter '*' typecheck",
-    "fix": "biome check --write .",
+    "check": "oxlint . && oxfmt --check . && bun scripts/check-theme.ts && bun run --filter '*' typecheck",
+    "fix": "oxlint --fix . && oxfmt .",
     "prepare": "git config core.hooksPath .githooks || true"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.5.7"
+    "oxfmt": "0.67.0",
+    "oxlint": "1.82.0",
+    "oxlint-tsgolint": "7.0.2001"
   }
 }

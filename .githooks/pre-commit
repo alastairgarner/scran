@@ -1,9 +1,10 @@
 #!/bin/sh
 set -e
 
-# Biome reads the staged set itself, so there is no lint-staged here and no dependency to install.
 # Check only, never --write: fixing during a commit would leave unstaged changes behind.
-bunx biome check --staged --no-errors-on-unmatched
+git diff --cached --name-only --diff-filter=ACMR -z | xargs -0 bunx oxlint --no-error-on-unmatched-pattern
+git diff --cached --name-only --diff-filter=ACMR -z | xargs -0 bunx oxfmt --check --no-error-on-unmatched-pattern
+bun scripts/check-theme.ts
 
 # tsc needs the whole program, so there is no meaningful "changed files only" typecheck. Both
 # workspaces together take about a second; when that stops being true, move this to CI as sn-web

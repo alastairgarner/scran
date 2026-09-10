@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Link, useNavigate } from 'react-router';
+
 import { capturePhoto, captureUrl } from '../api/recipes';
 import { Button, Field } from '../ui';
 
@@ -17,7 +18,7 @@ export function Capture() {
     setError('');
     try {
       const recipe = await capture;
-      navigate(`/recipes/${recipe.id}`);
+      void navigate(`/recipes/${recipe.id}`);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Capture failed.');
     } finally {
@@ -29,10 +30,8 @@ export function Capture() {
 
   return (
     <main className="mx-auto flex min-h-dvh max-w-2xl flex-col justify-center gap-4 p-4">
-      <h1 className="font-bold font-display text-3xl tracking-display">
-        Add a recipe
-      </h1>
-      <label className="flex aspect-[4/3] cursor-pointer flex-col items-center justify-center gap-3 rounded-ui border-4 border-line border-dashed bg-raised">
+      <h1 className="type-title font-bold">Add a recipe</h1>
+      <label className="rounded-ui border-line bg-panel flex aspect-[4/3] cursor-pointer flex-col items-center justify-center gap-3 border-4 border-dashed">
         <input
           type="file"
           accept="image/*"
@@ -46,18 +45,18 @@ export function Capture() {
             }
           }}
         />
-        <span aria-hidden="true" className="text-5xl">
+        <span aria-hidden="true" className="type-title">
           📷
         </span>
-        <span className="font-display font-semibold text-xl tracking-display">
+        <span className="type-body font-semibold">
           {busy ? 'Saving…' : 'Photograph the page'}
         </span>
       </label>
-      <div className="flex items-center gap-3 text-ink-muted text-sm">
-        <span className="h-px flex-1 bg-line" /> or{' '}
-        <span className="h-px flex-1 bg-line" />
+      <div className="type-label text-ink-muted flex items-center gap-3">
+        <span className="bg-line h-px flex-1" /> or{' '}
+        <span className="bg-line h-px flex-1" />
       </div>
-      <form className="space-y-3" onSubmit={submitUrl}>
+      <form className="space-y-3" onSubmit={event => void submitUrl(event)}>
         <Field
           label="Recipe URL"
           type="url"
@@ -69,8 +68,8 @@ export function Capture() {
           Import webpage
         </Button>
       </form>
-      {error && <p className="text-center text-sm text-veto">{error}</p>}
-      <Link to="/" className="min-h-11 py-3 text-center text-ink-muted">
+      {error && <p className="type-label text-danger text-center">{error}</p>}
+      <Link to="/" className="text-ink-muted min-h-11 py-3 text-center">
         ← All recipes
       </Link>
     </main>

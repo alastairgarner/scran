@@ -1,4 +1,5 @@
 import { expect, it } from 'bun:test';
+
 import { Field } from './ui';
 
 it('forwards form registration refs to the input', () => {

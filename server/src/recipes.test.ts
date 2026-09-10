@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'bun:test';
+
 import type { RecipeContent } from '@scran/shared';
+
 import { db } from './db';
 import {
   addVersion,

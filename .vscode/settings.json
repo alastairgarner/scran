@@ -1,18 +1,21 @@
 {
   "editor.formatOnSave": true,
-  "editor.defaultFormatter": "biomejs.biome",
+  "editor.defaultFormatter": "oxc.oxc-vscode",
   "editor.codeActionsOnSave": {
-    "source.fixAll.biome": "explicit"
+    "source.fixAll.oxc": "explicit"
   },
+  "oxc.typeAware": false,
   "files.trimTrailingWhitespace": true,
   "files.insertFinalNewline": true,
-  "[typescript]": { "editor.defaultFormatter": "biomejs.biome" },
-  "[typescriptreact]": { "editor.defaultFormatter": "biomejs.biome" },
-  "[javascript]": { "editor.defaultFormatter": "biomejs.biome" },
-  "[json]": { "editor.defaultFormatter": "biomejs.biome" },
-  "[jsonc]": { "editor.defaultFormatter": "biomejs.biome" },
-  "[css]": { "editor.defaultFormatter": "biomejs.biome" },
+  "[typescript]": { "editor.defaultFormatter": "oxc.oxc-vscode" },
+  "[typescriptreact]": { "editor.defaultFormatter": "oxc.oxc-vscode" },
+  "[javascript]": { "editor.defaultFormatter": "oxc.oxc-vscode" },
+  "[json]": { "editor.defaultFormatter": "oxc.oxc-vscode" },
+  "[jsonc]": { "editor.defaultFormatter": "oxc.oxc-vscode" },
+  "[css]": { "editor.defaultFormatter": "oxc.oxc-vscode" },
   "typescript.tsdk": "node_modules/typescript/lib",
+  "typescript.enablePromptUseWorkspaceTsdk": true,
   "javascript.preferences.importModuleSpecifier": "relative",
-  "typescript.preferences.importModuleSpecifier": "relative"
+  "typescript.preferences.importModuleSpecifier": "relative",
+  "js/ts.tsdk.path": "node_modules/typescript/lib"
 }

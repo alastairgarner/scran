@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Link, useParams } from 'react-router';
+
 import {
   commentOnRecipe,
   rateRecipe,
@@ -83,18 +84,16 @@ export function Recipe() {
   )?.score;
 
   return (
-    <main className="mx-auto max-w-2xl pb-32 lg:grid lg:h-dvh lg:max-w-6xl lg:grid-cols-[minmax(18rem,22rem)_minmax(0,1fr)] lg:overflow-hidden lg:pb-0">
+    <main className="bottom-sheet-clearance mx-auto max-w-2xl lg:grid lg:h-dvh lg:max-w-6xl lg:grid-cols-[minmax(18rem,22rem)_minmax(0,1fr)] lg:overflow-hidden lg:pb-0">
       <article className="px-4 pt-4 lg:col-start-2 lg:row-start-1 lg:h-dvh lg:overflow-y-auto lg:px-8 lg:pt-8">
         <Link
           to="/"
-          className="inline-flex min-h-11 items-center text-ink-muted"
+          className="text-ink-muted inline-flex min-h-11 items-center"
         >
           ← All recipes
         </Link>
-        <h1 className="font-bold font-display text-3xl leading-tight tracking-display">
-          {version.name}
-        </h1>
-        <p className="mt-2 text-ink-muted text-sm">
+        <h1 className="type-title font-bold">{version.name}</h1>
+        <p className="type-label text-ink-muted mt-2">
           {[
             version.prepTime,
             version.performTime,
@@ -107,26 +106,26 @@ export function Recipe() {
             .join(' · ')}
         </p>
         {recipe.data.tags.length > 0 && (
-          <p className="mt-1 text-ink-muted text-sm">
+          <p className="type-label text-ink-muted mt-1">
             {recipe.data.tags.join(' · ')}
           </p>
         )}
 
-        <ol className="mt-8 space-y-7">
+        <ol className="mt-8 space-y-8">
           {version.instructions.map((step, index) => (
             <li key={`${step.title ?? ''}:${step.text}`}>
               <div className="mb-2 flex items-center gap-3">
-                <span className="font-bold font-display text-accent text-sm uppercase tracking-widest">
+                <span className="type-label text-accent font-bold uppercase">
                   Step {index + 1}
                 </span>
-                <span className="h-px flex-1 bg-line" />
+                <span className="bg-line h-px flex-1" />
               </div>
               {step.title && (
-                <h2 className="mb-1 font-bold text-ink-muted text-sm uppercase tracking-wide">
+                <h2 className="type-label text-ink-muted mb-1 font-bold uppercase">
                   {step.title}
                 </h2>
               )}
-              <p className="text-lg leading-relaxed">{step.text}</p>
+              <p className="type-body">{step.text}</p>
             </li>
           ))}
         </ol>
@@ -135,10 +134,7 @@ export function Recipe() {
           <section>
             <Heading>From the page</Heading>
             {version.notes.map(note => (
-              <p
-                key={`${note.title ?? ''}:${note.text}`}
-                className="mt-2 leading-relaxed"
-              >
+              <p key={`${note.title ?? ''}:${note.text}`} className="mt-2">
                 {note.title && <strong>{note.title}: </strong>}
                 {note.text}
               </p>
@@ -157,20 +153,22 @@ export function Recipe() {
                 aria-pressed={ownRating === score}
                 disabled={rating.isPending}
                 onClick={() => rating.mutate(score)}
-                className={`min-h-12 flex-1 rounded-ui border-2 py-3 text-xl ${ownRating === score ? 'border-accent bg-accent text-accent-ink' : 'border-line'}`}
+                className={`type-body rounded-ui min-h-12 flex-1 border-2 py-3 ${ownRating === score ? 'border-accent bg-accent text-accent-ink' : 'border-line'}`}
               >
                 {GLYPH[score]}
               </button>
             ))}
           </div>
           {rating.error && (
-            <p className="mt-2 text-sm text-veto">{rating.error.message}</p>
+            <p className="type-label text-danger mt-2">
+              {rating.error.message}
+            </p>
           )}
-          <div className="mt-5 space-y-3">
+          <div className="mt-6 space-y-3">
             {recipe.data.comments.map(item => (
-              <p key={item.id} className="leading-relaxed">
+              <p key={item.id}>
                 “{item.body}”
-                <span className="text-ink-muted text-sm">
+                <span className="type-label text-ink-muted">
                   {' '}
                   — {item.userName}
                 </span>
@@ -179,14 +177,16 @@ export function Recipe() {
           </div>
           <form
             className="mt-4 flex gap-2"
-            onSubmit={comment.handleSubmit(values =>
-              addComment.mutate(values.body),
-            )}
+            onSubmit={event =>
+              void comment.handleSubmit(values =>
+                addComment.mutate(values.body),
+              )(event)
+            }
           >
             <input
               aria-label="Add a comment"
               placeholder="Add a comment…"
-              className="min-h-11 min-w-0 flex-1 rounded-pill border border-line bg-surface px-4 outline-none focus:border-accent"
+              className="rounded-pill border-line bg-background focus:border-accent min-h-11 min-w-0 flex-1 border px-4 outline-none"
               {...comment.register('body', { required: true })}
             />
             <Button disabled={addComment.isPending}>Post</Button>
@@ -203,7 +203,7 @@ export function Recipe() {
                     <img
                       src={`/api/photos/${source.id}`}
                       alt="The photographed recipe page"
-                      className="h-28 w-24 rounded-ui border border-line object-cover opacity-70"
+                      className="rounded-ui border-line h-28 w-24 border object-cover opacity-70"
                     />
                   </a>
                 ) : (
@@ -222,29 +222,27 @@ export function Recipe() {
       </article>
 
       <section
-        className={`fixed inset-x-0 bottom-0 z-20 mx-auto h-[82dvh] max-w-2xl rounded-t-[1.5rem] border-line border-t bg-raised shadow-card transition-transform duration-300 lg:static lg:col-start-1 lg:row-start-1 lg:flex lg:h-dvh lg:max-w-none lg:translate-y-0 lg:flex-col lg:rounded-none lg:border-0 lg:border-r lg:shadow-none ${ingredientsOpen ? 'translate-y-0' : 'translate-y-[calc(100%-4.5rem)]'}`}
+        className={`rounded-t-sheet border-line bg-panel shadow-card fixed inset-x-0 bottom-0 z-20 mx-auto h-[82dvh] max-w-2xl border-t transition-transform duration-300 lg:static lg:col-start-1 lg:row-start-1 lg:flex lg:h-dvh lg:max-w-none lg:translate-y-0 lg:flex-col lg:rounded-none lg:border-0 lg:border-r lg:shadow-none ${ingredientsOpen ? 'translate-y-0' : 'translate-y-[calc(100%-4.5rem)]'}`}
       >
         <button
           type="button"
           onClick={() => setIngredientsOpen(open => !open)}
           aria-expanded={ingredientsOpen}
-          className="w-full px-5 pt-3 pb-2 lg:hidden"
+          className="w-full px-6 pt-3 pb-2 lg:hidden"
         >
-          <span className="mx-auto mb-3 block h-1 w-10 rounded-pill bg-line" />
+          <span className="rounded-pill bg-line mx-auto mb-3 block h-1 w-10" />
           <span className="flex items-baseline gap-3">
-            <span className="font-bold font-display text-xl tracking-display">
-              Ingredients
-            </span>
-            <span className="text-ink-muted text-sm">
+            <span className="type-body font-bold">Ingredients</span>
+            <span className="type-label text-ink-muted">
               {version.ingredients.length} lines
             </span>
-            <span className="ml-auto text-accent text-xl">
+            <span className="type-body text-accent ml-auto">
               {ingredientsOpen ? '⌄' : '⌃'}
             </span>
           </span>
         </button>
-        <div className="max-h-[calc(82dvh-6rem)] overflow-y-auto px-5 pb-40 lg:max-h-none lg:flex-1 lg:py-8">
-          <h2 className="mb-5 hidden font-bold font-display text-2xl tracking-display lg:block">
+        <div className="bottom-clearance max-h-[calc(82dvh-6rem)] overflow-y-auto px-6 lg:max-h-none lg:flex-1 lg:py-8">
+          <h2 className="type-title mb-6 hidden font-bold lg:block">
             Ingredients
           </h2>
           <Scaler
@@ -266,14 +264,14 @@ export function Recipe() {
                   className="border-line border-b py-3"
                 >
                   {line.title && (
-                    <h3 className="mb-1 font-bold text-ink-muted text-sm uppercase tracking-wide">
+                    <h3 className="type-label text-ink-muted mb-1 font-bold uppercase">
                       {line.title}
                     </h3>
                   )}
-                  <p className="text-lg leading-snug">
+                  <p className="type-body">
                     {scaled}
                     {unscaled && (
-                      <span className="ml-2 text-ink-muted text-sm">
+                      <span className="type-label text-ink-muted ml-2">
                         unscaled
                       </span>
                     )}
@@ -305,20 +303,20 @@ function Scaler({
     const servings = Math.max(1, Math.round(yieldQuantity * factor));
     return (
       <div className="flex items-center gap-3">
-        <span className="text-ink-muted text-sm">
+        <span className="type-label text-ink-muted">
           {recipeYield?.match(/serv/i) ? 'Serves' : 'Makes'}
         </span>
-        <div className="ml-auto flex items-center gap-1 rounded-pill border-2 border-line p-1">
+        <div className="rounded-pill border-line ml-auto flex items-center gap-1 border-2 p-1">
           <button
             type="button"
             aria-label="One fewer"
             disabled={servings <= 1}
             onClick={() => onFactor(Math.max(1, servings - 1) / yieldQuantity)}
-            className="h-11 w-11 rounded-pill text-2xl disabled:opacity-30"
+            className="type-body rounded-pill h-11 w-11 disabled:opacity-30"
           >
             −
           </button>
-          <span className="min-w-12 text-center font-bold text-xl tabular-nums">
+          <span className="type-body min-w-12 text-center font-bold tabular-nums">
             {servings}
             {!recipeYield?.match(/serv/i) && yieldUnit ? ` ${yieldUnit}` : ''}
           </span>
@@ -326,7 +324,7 @@ function Scaler({
             type="button"
             aria-label="One more"
             onClick={() => onFactor((servings + 1) / yieldQuantity)}
-            className="h-11 w-11 rounded-pill text-2xl"
+            className="type-body rounded-pill h-11 w-11"
           >
             +
           </button>
@@ -334,7 +332,7 @@ function Scaler({
         <button
           type="button"
           onClick={() => onFactor(1)}
-          className={`min-h-11 text-accent text-sm ${factor === 1 ? 'invisible' : ''}`}
+          className={`type-label text-accent min-h-11 ${factor === 1 ? 'invisible' : ''}`}
         >
           reset
         </button>
@@ -345,7 +343,7 @@ function Scaler({
   return (
     <div>
       {recipeYield && (
-        <p className="mb-2 text-ink-muted text-sm">{recipeYield}</p>
+        <p className="type-label text-ink-muted mb-2">{recipeYield}</p>
       )}
       <div className="flex gap-2">
         {[0.5, 1, 2, 3].map(value => (
@@ -353,7 +351,7 @@ function Scaler({
             key={value}
             type="button"
             onClick={() => onFactor(value)}
-            className={`min-h-11 flex-1 rounded-ui border-2 ${factor === value ? 'border-accent bg-accent text-accent-ink' : 'border-line'}`}
+            className={`rounded-ui min-h-11 flex-1 border-2 ${factor === value ? 'border-accent bg-accent text-accent-ink' : 'border-line'}`}
           >
             ×{value}
           </button>
@@ -365,18 +363,18 @@ function Scaler({
 
 function Heading({ children }: { children: React.ReactNode }) {
   return (
-    <div className="mt-10 mb-3 flex items-center gap-3">
-      <h2 className="font-bold font-display text-ink-muted text-sm uppercase tracking-widest">
+    <div className="mt-12 mb-3 flex items-center gap-3">
+      <h2 className="type-label text-ink-muted font-bold uppercase">
         {children}
       </h2>
-      <span className="h-px flex-1 bg-line" />
+      <span className="bg-line h-px flex-1" />
     </div>
   );
 }
 
 function State({ children }: { children: React.ReactNode }) {
   return (
-    <main className="grid min-h-dvh place-items-center gap-4 p-6 text-center text-ink-muted">
+    <main className="text-ink-muted grid min-h-dvh place-items-center gap-4 p-6 text-center">
       <div className="space-y-4">
         {children}
         <p>

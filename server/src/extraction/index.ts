@@ -12,6 +12,7 @@ import {
   normaliseTags,
   toRecipeContent,
 } from '@scran/shared';
+
 import { AppError } from '../errors';
 import type { Complete, CompleteRequest } from './openai';
 import { complete, prompts } from './openai';
@@ -57,7 +58,8 @@ function selectedHtml(html: string, selector: string): string | undefined {
 function recipeJsonLd(html: string): string | undefined {
   const recipes = [...html.matchAll(JSON_LD)].flatMap(match => {
     try {
-      return findRecipes(JSON.parse(match[2]));
+      const parsed = JSON.parse(match[2]) as unknown;
+      return findRecipes(parsed);
     } catch {
       return [];
     }
@@ -72,7 +74,7 @@ function findRecipes(value: unknown): unknown[] {
   if (value === null || typeof value !== 'object') {
     return [];
   }
-  const entries = Object.entries(value);
+  const entries = Object.entries(value as Record<string, unknown>);
   const type = entries.find(([key]) => key === '@type')?.[1];
   if (type === 'Recipe' || (Array.isArray(type) && type.includes('Recipe'))) {
     return [value];

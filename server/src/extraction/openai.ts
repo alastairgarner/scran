@@ -9,6 +9,7 @@
  */
 import { extractionSchema } from '@scran/shared';
 import { z } from 'zod';
+
 import { config } from '../config';
 import { AppError } from '../errors';
 

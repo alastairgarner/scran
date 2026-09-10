@@ -8,6 +8,7 @@ import { zValidator } from '@hono/zod-validator';
 import { signUpSchema } from '@scran/shared';
 import type { MiddlewareHandler } from 'hono';
 import { Hono } from 'hono';
+
 import { readInvite, redeemInvite } from '../auth';
 import { ClientError } from '../errors';
 

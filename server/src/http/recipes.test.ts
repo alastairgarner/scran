@@ -4,6 +4,7 @@
  * person obtained the way ticket 01 says people arrive.
  */
 import { describe, expect, it } from 'bun:test';
+
 import { config } from '../config';
 import { app } from '../index';
 import { signUpThroughInvite, withoutOpenAI } from '../testing';
@@ -21,20 +22,27 @@ const photo = () => {
 
 const asPerson = async () => {
   const { cookie } = await signUpThroughInvite();
-  return (path: string, init: RequestInit = {}) =>
-    app.request(path, {
+  return (path: string, init: RequestInit = {}) => {
+    const headers = new Headers(init.headers);
+    if (!headers.has('cookie')) {
+      headers.set('cookie', cookie);
+    }
+    if (!headers.has('origin')) {
+      headers.set('origin', config.baseUrl);
+    }
+    if (
+      init.body &&
+      typeof init.body === 'string' &&
+      !headers.has('content-type')
+    ) {
+      headers.set('content-type', 'application/json');
+    }
+
+    return app.request(path, {
       ...init,
-      headers: {
-        cookie,
-        // A multipart capture is a form-shaped request, so `hono/csrf` wants
-        // an origin — the browser sends one on every same-origin fetch.
-        origin: config.baseUrl,
-        ...(init.body && typeof init.body === 'string'
-          ? { 'content-type': 'application/json' }
-          : {}),
-        ...init.headers,
-      },
+      headers,
     });
+  };
 };
 
 const json = (body: unknown) => ({
@@ -207,7 +215,9 @@ describe('the recipe API', () => {
     // A person wrote it, so no model — and both marks survive, unaveraged: a
     // cross beside a double tick is the point of the scale.
     expect(recipe.version.model).toBeNull();
-    expect(recipe.ratings.map(r => r.score).sort()).toEqual([1, 3]);
+    expect(recipe.ratings.map(r => r.score).sort((a, b) => a - b)).toEqual([
+      1, 3,
+    ]);
     expect(recipe.comments[0].body).toBe('Needs more chocolate.');
 
     // Act + Assert — a comment is its author's.

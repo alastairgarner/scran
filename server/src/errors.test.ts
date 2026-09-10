@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'bun:test';
+
 import { Hono } from 'hono';
 import { requestId } from 'hono/request-id';
+
 import { AppError, ClientError, errorHandler } from './errors';
 
 /** The boundary as index.ts wires it, over a route that throws what we hand it. */

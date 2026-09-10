@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'bun:test';
+
 import { Hono } from 'hono';
+
 import type { AppEnv } from '../auth';
 import { auth, createInvite, requireUser } from '../auth';
 import { config } from '../config';

@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'bun:test';
+
 import { extractionSchema } from '@scran/shared';
+
 import { AppError } from '../errors';
 import { RECORDED_PHOTOS, recordedComplete } from '../testing';
 import webpage from './fixtures/webpage.json';

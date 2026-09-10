@@ -4,74 +4,101 @@
 
 @theme {
   --color-*: initial;
+  --font-*: initial;
+  --text-*: initial;
+  --font-weight-*: initial;
+  --tracking-*: initial;
+  --leading-*: initial;
+  --radius-*: initial;
+  --shadow-*: initial;
 
-  --paper-50: oklch(0.99 0.008 85);
-  --paper-100: oklch(0.96 0.014 85);
-  --paper-200: oklch(0.91 0.02 82);
-  --paper-300: oklch(0.83 0.028 80);
-  --paper-700: oklch(0.45 0.03 60);
-  --paper-900: oklch(0.24 0.028 55);
-  --paper-950: oklch(0.17 0.022 55);
-  --rust-300: oklch(0.72 0.11 44);
-  --rust-500: oklch(0.55 0.14 42);
-  --green-300: oklch(0.74 0.12 152);
-  --green-500: oklch(0.58 0.14 152);
-  --red-300: oklch(0.72 0.14 25);
-  --red-500: oklch(0.56 0.17 25);
-
-  --font-serif:
-    "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
-  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
-  --radius-card: 0.75rem;
-  --radius-pill: 9999px;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
 }
 
 :root {
-  --surface: var(--paper-50);
-  --raised: var(--paper-100);
-  --ink: var(--paper-900);
-  --ink-muted: var(--paper-700);
-  --accent: var(--rust-500);
-  --accent-ink: var(--paper-50);
-  --line: var(--paper-200);
-  --veto: var(--red-500);
-  --praise: var(--green-500);
-  --display-font: var(--font-serif);
-  --body-font: var(--font-serif);
+  --background: oklch(0.99 0.008 85);
+  --panel: oklch(0.96 0.014 85);
+  --ink: oklch(0.24 0.028 55);
+  --ink-muted: oklch(0.45 0.03 60);
+  --accent: oklch(0.55 0.14 42);
+  --accent-ink: oklch(0.99 0.008 85);
+  --line: oklch(0.91 0.02 82);
+  --danger: oklch(0.56 0.17 25);
+  --success: oklch(0.58 0.14 152);
+  --font-reading:
+    "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+  --font-ui: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
   --card-shadow: 0 1px 2px oklch(0.24 0.028 55 / 0.08);
-  --ui-radius: var(--radius-card);
-  --spacing: 0.26rem;
-  --display-tracking: -0.01em;
+  --ui-radius: 0.75rem;
+  --pill-radius: 9999px;
+  --sheet-radius: 1.5rem;
 }
 
 [data-theme="dark"] {
-  --surface: var(--paper-950);
-  --raised: var(--paper-900);
-  --ink: var(--paper-100);
-  --ink-muted: var(--paper-300);
-  --accent: var(--rust-300);
-  --accent-ink: var(--paper-950);
+  --background: oklch(0.17 0.022 55);
+  --panel: oklch(0.24 0.028 55);
+  --ink: oklch(0.96 0.014 85);
+  --ink-muted: oklch(0.83 0.028 80);
+  --accent: oklch(0.72 0.11 44);
+  --accent-ink: oklch(0.17 0.022 55);
   --line: oklch(0.32 0.02 55);
-  --veto: var(--red-300);
-  --praise: var(--green-300);
+  --danger: oklch(0.72 0.14 25);
+  --success: oklch(0.74 0.12 152);
   --card-shadow: 0 1px 2px oklch(0 0 0 / 0.5);
 }
 
 @theme inline {
-  --color-surface: var(--surface);
-  --color-raised: var(--raised);
+  --color-background: var(--background);
+  --color-panel: var(--panel);
   --color-ink: var(--ink);
   --color-ink-muted: var(--ink-muted);
   --color-accent: var(--accent);
   --color-accent-ink: var(--accent-ink);
   --color-line: var(--line);
-  --color-veto: var(--veto);
-  --color-praise: var(--praise);
-  --font-display: var(--display-font);
-  --font-body: var(--body-font);
+  --color-danger: var(--danger);
+  --color-success: var(--success);
   --radius-ui: var(--ui-radius);
+  --radius-pill: var(--pill-radius);
+  --radius-sheet: var(--sheet-radius);
   --shadow-card: var(--card-shadow);
-  --tracking-display: var(--display-tracking);
+}
+
+@utility type-label {
+  font-family: var(--font-ui);
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  letter-spacing: 0.025em;
+}
+
+@utility type-body {
+  font-family: var(--font-reading);
+  font-size: 1.125rem;
+  line-height: 1.75rem;
+  letter-spacing: 0;
+}
+
+@utility type-title {
+  font-family: var(--font-reading);
+  font-size: 1.875rem;
+  line-height: 2.25rem;
+  letter-spacing: -0.01em;
+}
+
+@utility bottom-safe {
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+}
+
+@utility bottom-safe-roomy {
+  padding-bottom: max(1.5rem, env(safe-area-inset-bottom));
+}
+
+@utility bottom-clearance {
+  padding-bottom: 10rem;
+}
+
+@utility bottom-sheet-clearance {
+  padding-bottom: 8rem;
 }
 
 @layer base {
@@ -91,9 +118,8 @@
     min-width: 20rem;
     min-height: 100dvh;
     margin: 0;
-    background: var(--surface);
+    background: var(--background);
     color: var(--ink);
-    font-family: var(--body-font);
     -webkit-text-size-adjust: 100%;
   }
 
