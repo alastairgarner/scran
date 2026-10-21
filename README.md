@@ -33,3 +33,51 @@ immediately while extraction runs.
 - `server/` — Hono API
 - `client/` — Vite + React
 - `tasks/` — issues and specs
+
+## Home server
+
+`compose.yaml` runs the built frontend and API in one container, published only
+on `127.0.0.1:3080`. The host's Caddy serves
+`https://scran.hp.affablegecko.net` over Tailscale. DNS must point that hostname
+at `100.90.71.107` without Cloudflare proxying.
+
+Set `OPENAI_API_KEY` and a random `AUTH_SECRET` (at least 32 characters) in `.env`,
+then run:
+
+```sh
+docker compose up -d --build --wait
+docker compose exec scran bun server/src/cli/invite.ts you@example.com
+```
+
+The Compose configuration sets the HTTPS origin and secure cookies. The image
+does not contain `.env` or recipe data. Extraction defaults to `gpt-4.1` with
+`temperature: 0`, matching the recorded extraction experiments. Any model override
+must support that sampling setting. On this host, install the Caddy route once:
+
+```sh
+sudo sh deploy/install-caddy.sh
+```
+
+This validates the combined configuration, preserves a backup, and reloads the
+existing Caddy service. It reuses the existing `cloudflare_tls` snippet.
+
+Docker is enabled at boot on the home server; `restart: unless-stopped` brings
+Scran back after restarts unless it was explicitly stopped. Inspect it with
+`docker compose ps` and `docker compose logs --tail=100 scran`.
+
+All persistent state lives in `./data`: `scran.db`, SQLite's WAL/SHM sidecars, and
+`sources/`. Mounting the whole directory keeps them together across container
+replacement. The `:Z` mount option supports this host's SELinux configuration.
+
+For a consistent manual backup, stop writes while copying the whole directory:
+
+```sh
+mkdir -p backups
+docker compose stop scran
+tar -czf "backups/scran-$(date +%Y%m%d-%H%M%S).tar.gz" data
+docker compose start scran
+```
+
+Keep a separate secure copy of `.env`. To restore, stop Scran, preserve the
+current `data` directory, unpack the backup into the repository root, and start
+Scran again. Automated and off-machine backups are not configured here.

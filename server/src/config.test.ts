@@ -34,7 +34,7 @@ describe('parseConfig', () => {
     expect(config.databaseUrl).toBe(`${config.dataDir}/scran.db`);
     expect(config).toMatchObject({
       openaiApiKey: 'sk-test',
-      openaiModel: 'gpt-5',
+      openaiModel: 'gpt-4.1',
       logLevel: 'info',
       port: 3000,
       baseUrl: 'http://localhost:5173',

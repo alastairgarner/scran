@@ -85,11 +85,7 @@ export const complete: Complete = async request => {
     },
     body: JSON.stringify({
       model: config.openaiModel,
-      // Measured, not assumed: at the default this page came back with 13, 11
-      // and 13 ingredients across three runs; at 0 it was 10, 10, 10 with the
-      // yield, the time and the tags identical every time. It does not buy
-      // full determinism — the model still misreads small print differently
-      // each run — but everything downstream of the reading stops moving.
+      // GPT-4.1 at temperature zero is the tested extraction configuration.
       temperature: 0,
       response_format: {
         type: 'json_schema',

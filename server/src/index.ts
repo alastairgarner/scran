@@ -1,4 +1,5 @@
 import { Hono } from 'hono';
+import { serveStatic } from 'hono/bun';
 import { csrf } from 'hono/csrf';
 import { requestId } from 'hono/request-id';
 
@@ -66,6 +67,15 @@ app.on(['GET', 'POST'], '/api/auth/*', c => auth.handler(c.req.raw));
 
 // Chained, because this is what `hc<AppType>` reads on the client — ticket 05.
 const routes = app.route('/', invites).route('/', recipeRoutes);
+
+// Docker starts from the repository root and ships the built client here.
+// Preserve API errors and missing-asset 404s rather than returning HTML.
+app.get('/assets/*', serveStatic({ root: './client/dist' }));
+app.on(
+  'GET',
+  ['/', '/signin', '/invite/:token', '/capture', '/recipes/:id'],
+  serveStatic({ path: './client/dist/index.html' }),
+);
 
 /** The client's view of this server: every endpoint, typed. */
 export type AppType = typeof routes;

@@ -17,7 +17,7 @@ const envSchema = z.object({
   DATA_DIR: z.string().default(join(REPO_ROOT, 'data')),
   DATABASE_URL: z.string().default(join(REPO_ROOT, 'data', 'scran.db')),
   OPENAI_API_KEY: z.string().min(1),
-  OPENAI_MODEL: z.string().default('gpt-5'),
+  OPENAI_MODEL: z.string().default('gpt-4.1'),
   LOG_LEVEL: z
     .enum(['trace', 'debug', 'info', 'warn', 'error', 'fatal'])
     .default('info'),

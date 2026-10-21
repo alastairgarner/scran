@@ -1,0 +1,30 @@
+services:
+  scran:
+    build: .
+    restart: unless-stopped
+    ports:
+      - '127.0.0.1:3080:3000'
+    environment:
+      OPENAI_API_KEY: ${OPENAI_API_KEY:?Set OPENAI_API_KEY in .env}
+      AUTH_SECRET: ${AUTH_SECRET:?Set AUTH_SECRET in .env}
+      BASE_URL: https://scran.hp.affablegecko.net
+      COOKIE_SECURE: 'true'
+      PORT: '3000'
+      DATA_DIR: /data
+      DATABASE_URL: /data/scran.db
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4.1}
+    volumes:
+      # Mount the directory, including SQLite's WAL/SHM sidecars and sources.
+      - ./data:/data:Z
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'bun',
+          '-e',
+          "const r = await fetch('http://127.0.0.1:3000/api/health'); process.exit(r.ok ? 0 : 1)",
+        ]
+      interval: 30s
+      timeout: 5s
+      start_period: 15s
+      retries: 3
