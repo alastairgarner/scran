@@ -10,6 +10,7 @@
 import { zValidator } from '@hono/zod-validator';
 import {
   commentSchema,
+  photoRotationSchema,
   ratingSchema,
   recipeContentSchema,
 } from '@scran/shared';
@@ -19,10 +20,21 @@ import { z } from 'zod';
 import type { AppEnv } from '../auth';
 import { requireUser } from '../auth';
 import { ClientError } from '../errors';
+import { previewPhoto } from '../extraction/photo';
 import * as recipes from '../recipes';
 
 /** A phone photograph, not a scan. Generous, and still a bound. */
 const MAX_PHOTO_BYTES = 25 * 1024 * 1024;
+
+function requirePhoto(value: unknown): File {
+  if (!(value instanceof File) || !value.type.startsWith('image/')) {
+    throw ClientError.validation('Send a photo.');
+  }
+  if (value.size > MAX_PHOTO_BYTES) {
+    throw ClientError.validation('That photo is too big.');
+  }
+  return value;
+}
 
 const urlCaptureSchema = z.object({
   url: z
@@ -41,6 +53,22 @@ export const recipeRoutes = new Hono<AppEnv>()
   // Everything about recipes is behind a session. The client's copy of it is
   // for drawing; this is the only thing that decides access.
   .use('/api/*', requireUser)
+
+  .post('/api/photos/preview', async c => {
+    const body = await c.req.parseBody();
+    const photo = requirePhoto(body.photo);
+    let preview: Blob;
+    try {
+      preview = await previewPhoto(photo);
+    } catch {
+      throw ClientError.validation(
+        'This photo could not be displayed. Try a JPEG, PNG or WebP photo.',
+      );
+    }
+    return new Response(preview, {
+      headers: { 'content-type': 'image/png', 'cache-control': 'no-store' },
+    });
+  })
 
   .get(
     '/api/recipes',
@@ -67,17 +95,21 @@ export const recipeRoutes = new Hono<AppEnv>()
     }
 
     const body = await c.req.parseBody();
-    const photo = body.photo;
-    if (!(photo instanceof File) || !photo.type.startsWith('image/')) {
-      throw ClientError.validation('Send a photo.');
-    }
-    if (photo.size > MAX_PHOTO_BYTES) {
-      throw ClientError.validation('That photo is too big.');
+    const photo = requirePhoto(body.photo);
+    const rotation = z.coerce
+      .number()
+      .pipe(photoRotationSchema)
+      .safeParse(body.rotation ?? 0);
+    if (!rotation.success) {
+      throw ClientError.validation(
+        'Choose a rotation of 0, 90, 180 or 270 degrees.',
+      );
     }
 
     const { id } = await recipes.capture(c.get('user').id, {
       kind: 'photo',
       data: photo,
+      rotation: rotation.data,
     });
     // Deliberately floating: the row is the progress bar, and a failure lands
     // on it rather than on a request nobody is waiting for any more.

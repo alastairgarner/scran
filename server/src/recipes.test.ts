@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'bun:test';
 
 import type { RecipeContent } from '@scran/shared';
+import sharp from 'sharp';
 
 import { db } from './db';
 import {
@@ -18,7 +19,11 @@ import {
   sweepStalePending,
 } from './recipes';
 import { readSource } from './storage';
-import { recordedComplete, signUpThroughInvite } from './testing';
+import {
+  recordedComplete,
+  signUpThroughInvite,
+  TEST_PHOTO_BYTES,
+} from './testing';
 
 /** @returns {Promise<string>} A real user id, made the way the app makes them. */
 async function person(): Promise<string> {
@@ -30,8 +35,7 @@ async function person(): Promise<string> {
   ).id;
 }
 
-const photo = () =>
-  new Blob([new Uint8Array([0xff, 0xd8, 0xff])], { type: 'image/jpeg' });
+const photo = () => new Blob([TEST_PHOTO_BYTES], { type: 'image/png' });
 
 const content = (name: string): RecipeContent => ({
   name,
@@ -263,6 +267,55 @@ describe('capture', () => {
     expect(recipe.status).toBe('ready');
     expect(recipe.version?.name).toBe('Chocolate Chip Muffins');
     expect(recipe.tags).toContain('baking');
+  });
+
+  it('keeps the original photo and reuses its selected rotation after failure', async () => {
+    const userId = await person();
+    const { id, sourceId } = await capture(userId, {
+      kind: 'photo',
+      data: photo(),
+      rotation: 90,
+    });
+    expect(
+      db.query('SELECT rotation FROM source WHERE id = ?').get(sourceId),
+    ).toMatchObject({ rotation: 90 });
+
+    let attempts = 0;
+    const recorded = recordedComplete();
+    const complete: typeof recorded = async request => {
+      expect(request.source.kind).toBe('photo');
+      if (request.source.kind !== 'photo') {
+        throw new Error('Expected a photo');
+      }
+      const metadata = await sharp(
+        Buffer.from(await request.source.photo.arrayBuffer()),
+      ).metadata();
+      expect(metadata.width).toBe(3);
+      expect(metadata.height).toBe(2);
+      if (++attempts === 1) {
+        throw new Error('Temporary upstream failure');
+      }
+      return recorded(request);
+    };
+    await runExtraction(id, { complete });
+    expect(get(id).status).toBe('failed');
+    await runExtraction(id, { complete });
+    expect(get(id).status).toBe('ready');
+    expect(attempts).toBe(2);
+    const source = db
+      .query('SELECT path FROM source WHERE id = ?')
+      .get(sourceId);
+    if (
+      typeof source !== 'object' ||
+      source === null ||
+      !('path' in source) ||
+      typeof source.path !== 'string'
+    ) {
+      throw new Error('Missing source');
+    }
+    expect(Buffer.from(await readSource(source.path).arrayBuffer())).toEqual(
+      TEST_PHOTO_BYTES,
+    );
   });
 
   it('leaves a failure retryable, and refuses to re-extract once there is content', async () => {

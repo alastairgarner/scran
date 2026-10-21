@@ -1,3 +1,4 @@
+import type { PhotoRotation } from '@scran/shared';
 import { queryOptions } from '@tanstack/react-query';
 
 import { api, errorMessage } from './client';
@@ -65,10 +66,25 @@ export async function retryRecipe(id: number) {
   }
 }
 
-export async function capturePhoto(photo: File) {
+export async function capturePhoto(photo: File, rotation: PhotoRotation = 0) {
   const form = new FormData();
   form.append('photo', photo);
+  form.append('rotation', String(rotation));
   return capture({ method: 'POST', body: form });
+}
+
+export async function previewPhoto(photo: File, signal: AbortSignal) {
+  const form = new FormData();
+  form.append('photo', photo);
+  const response = await fetch('/api/photos/preview', {
+    method: 'POST',
+    body: form,
+    signal,
+  });
+  if (!response.ok) {
+    throw new Error(await errorMessage(response));
+  }
+  return response.blob();
 }
 
 export async function captureUrl(url: string) {

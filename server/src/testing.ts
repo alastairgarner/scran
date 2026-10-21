@@ -9,6 +9,12 @@ import recorded from './extraction/fixtures/extractions.json';
 import type { Complete } from './extraction/openai';
 import { app } from './index';
 
+/** A real 2×3 PNG so image decoding is exercised even with recorded replies. */
+export const TEST_PHOTO_BYTES = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAIAAAADCAIAAAA2iEnWAAAACXBIWXMAAAPoAAAD6AG1e1JrAAAAEUlEQVQImWP4z8DwnwGMERQARNAF+661WskAAAAASUVORK5CYII=',
+  'base64',
+);
+
 /** The four real replies, keyed by the photo that produced each. */
 type Recorded = Record<
   string,

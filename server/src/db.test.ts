@@ -34,7 +34,11 @@ describe('migrate', () => {
     const applied = migrate(db);
 
     // Assert
-    expect(applied).toEqual(['001-init.sql', '002-tags-and-time.sql']);
+    expect(applied).toEqual([
+      '001-init.sql',
+      '002-tags-and-time.sql',
+      '003-source-rotation.sql',
+    ]);
     expect(tableNames(db)).toEqual(
       expect.arrayContaining([
         'comment',

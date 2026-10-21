@@ -17,4 +17,5 @@ export const signUpSchema = z.object({
 export type SignUp = z.infer<typeof signUpSchema>;
 
 export * from './recipe';
+export * from './photo';
 export * from './tags';

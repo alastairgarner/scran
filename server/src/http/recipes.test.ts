@@ -7,14 +7,18 @@ import { describe, expect, it } from 'bun:test';
 
 import { config } from '../config';
 import { app } from '../index';
-import { signUpThroughInvite, withoutOpenAI } from '../testing';
+import {
+  signUpThroughInvite,
+  TEST_PHOTO_BYTES,
+  withoutOpenAI,
+} from '../testing';
 
 const photo = () => {
   const form = new FormData();
   form.set(
     'photo',
-    new File([new Uint8Array([0xff, 0xd8, 0xff, 0xe0])], 'page.jpg', {
-      type: 'image/jpeg',
+    new File([TEST_PHOTO_BYTES], 'page.png', {
+      type: 'image/png',
     }),
   );
   return form;
@@ -79,6 +83,35 @@ async function captureRecipe(request: Awaited<ReturnType<typeof asPerson>>) {
 }
 
 describe('the recipe API', () => {
+  it('previews a photo without creating a recipe and rejects unreadable images', async () => {
+    const request = await asPerson();
+    const before = await (await request('/api/recipes')).json();
+    const response = await request('/api/photos/preview', {
+      method: 'POST',
+      body: photo(),
+    });
+    expect(response.status).toBe(200);
+    expect(response.headers.get('content-type')).toBe('image/png');
+    expect(response.headers.get('cache-control')).toBe('no-store');
+    expect(await (await request('/api/recipes')).json()).toEqual(before);
+
+    const bad = new FormData();
+    bad.set('photo', new File(['broken'], 'broken.png', { type: 'image/png' }));
+    expect(
+      (await request('/api/photos/preview', { method: 'POST', body: bad }))
+        .status,
+    ).toBe(400);
+    expect(
+      (
+        await app.request('/api/photos/preview', {
+          method: 'POST',
+          body: photo(),
+          headers: { origin: config.baseUrl },
+        })
+      ).status,
+    ).toBe(401);
+  });
+
   it('turns a posted photo into a ready recipe with a version', async () => {
     // Arrange
     const request = await asPerson();
@@ -101,7 +134,7 @@ describe('the recipe API', () => {
     // The photo is on disk and served by source id, never by path.
     const served = await request(`/api/photos/${recipe.sources[0].id}`);
     expect(served.status).toBe(200);
-    expect((await served.arrayBuffer()).byteLength).toBe(4);
+    expect(Buffer.from(await served.arrayBuffer())).toEqual(TEST_PHOTO_BYTES);
   });
 
   it('refuses a private URL before fetching it', async () => {
@@ -132,6 +165,19 @@ describe('the recipe API', () => {
 
     // Assert
     expect(response.status).toBe(400);
+  });
+
+  it('rejects invalid rotation values before starting extraction', async () => {
+    const request = await asPerson();
+    for (const rotation of ['45', '-90', '360', 'NaN']) {
+      const form = photo();
+      form.set('rotation', rotation);
+      const response = await request('/api/recipes', {
+        method: 'POST',
+        body: form,
+      });
+      expect(response.status).toBe(400);
+    }
   });
 
   it('is closed to anyone without a session', async () => {

@@ -28,6 +28,10 @@ Open the printed URL, create the account, then use its email and password on lat
 From the catalogue, use **+** to photograph a page or import a recipe URL. The new row appears
 immediately while extraction runs.
 
+After choosing a photo, check the preview and rotate it until the text is upright,
+then select **Extract recipe**. The original photo is kept unchanged; extraction
+and retries use a copy with camera orientation and your selected rotation applied.
+
 ## Layout
 
 - `server/` — Hono API

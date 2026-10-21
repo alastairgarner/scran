@@ -13,13 +13,20 @@ import { request as httpRequest } from 'node:http';
 import { request as httpsRequest } from 'node:https';
 import { BlockList, isIP, type LookupFunction } from 'node:net';
 
-import type { Ingredient, RecipeContent, Section, TagId } from '@scran/shared';
+import type {
+  Ingredient,
+  PhotoRotation,
+  RecipeContent,
+  Section,
+  TagId,
+} from '@scran/shared';
 import { normaliseTags, TAGS } from '@scran/shared';
 
 import { db } from './db';
 import { AppError, ClientError } from './errors';
 import { extract } from './extraction';
 import type { Complete } from './extraction/openai';
+import { preparePhoto } from './extraction/photo';
 import { logger } from './logger';
 import { readSource, saveSource } from './storage';
 
@@ -27,7 +34,7 @@ import { readSource, saveSource } from './storage';
 export type RecipeStatus = 'pending' | 'ready' | 'failed';
 
 type CaptureSource =
-  | { kind: 'photo'; data: Blob }
+  | { kind: 'photo'; data: Blob; rotation?: PhotoRotation }
   | { kind: 'html'; data: Blob; url: string };
 
 /** Long enough that a slow model finishes; short enough to unstick a restart. */
@@ -174,13 +181,14 @@ export async function capture(
       .get(userId, at, at) as { id: number };
     const sourceRow = db
       .query(
-        `INSERT INTO source (recipeId, kind, url, createdAt, updatedAt)
-         VALUES (?, ?, ?, ?, ?) RETURNING id`,
+        `INSERT INTO source (recipeId, kind, url, rotation, createdAt, updatedAt)
+         VALUES (?, ?, ?, ?, ?, ?) RETURNING id`,
       )
       .get(
         recipe.id,
         source.kind,
         source.kind === 'html' ? source.url : null,
+        source.kind === 'photo' ? (source.rotation ?? 0) : 0,
         at,
         at,
       ) as { id: number };
@@ -431,11 +439,16 @@ export async function runExtraction(
   try {
     const source = db
       .query(
-        `SELECT id, kind, path FROM source
+        `SELECT id, kind, path, rotation FROM source
          WHERE recipeId = ? ORDER BY id LIMIT 1`,
       )
       .get(recipeId) as
-      | { id: number; kind: 'photo' | 'html'; path: string | null }
+      | {
+          id: number;
+          kind: 'photo' | 'html';
+          path: string | null;
+          rotation: PhotoRotation;
+        }
       | undefined;
     if (!source?.path) {
       throw AppError.invariant('A pending recipe has no source.', { recipeId });
@@ -444,7 +457,7 @@ export async function runExtraction(
     const file = readSource(source.path);
     const extracted = await extract(
       source.kind === 'photo'
-        ? { kind: 'photo', photo: file }
+        ? { kind: 'photo', photo: await preparePhoto(file, source.rotation) }
         : { kind: 'html', html: await file.text() },
       deps,
     );
