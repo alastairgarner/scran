@@ -56,3 +56,10 @@ then temporary placement targets appear between cards. This works for long metho
 scrolling. Ingredient text remains the truth and changing it re-derives the scaling overlay. Tags
 stay on the same screen as a fixed checklist but save separately. Done returns to the ordinary recipe
 view; no edit metadata or history UI is added. The same editor opened empty covers typed-in recipes.
+
+## Comments
+
+2026-10-22: The recipe actions menu now replaces the proposed pencil as the editor entry point,
+per the user's updated UX choice. Its actions are Edit, Read source again, and Delete. Reading
+the source again appends a version and preserves prior content on failure. Existing-recipe
+editing follows the card and select-scroll-place design; typed-in recipe creation remains separate.

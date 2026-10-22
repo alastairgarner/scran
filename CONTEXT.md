@@ -28,8 +28,12 @@ A version with no extraction metadata was written by a person.
 
 **Retry**:
 Running extraction again for a recipe that never got a version — one that failed, or never
-finished. Distinct from re-extraction, which would re-run the model over a recipe that already has
-content and is deliberately not supported: once a recipe has a version, corrections are edits.
+finished.
+
+**Read source again**:
+Reading the permanent source again and appending a new model-produced version. Earlier versions
+and household tags are preserved; if reading fails, the existing version remains available.
+Edits wait while reading is in progress. This is distinct from retrying an initial extraction.
 
 ### Where recipes come from
 

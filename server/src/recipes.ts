@@ -428,13 +428,16 @@ async function readHtml(response: Response, url: string): Promise<Blob> {
 }
 
 /**
- * Reads the recipe off its source and writes version 1. Called as a floating
+ * Reads the recipe off its source and appends a version. Called as a floating
  * promise, so it swallows what it throws — the failure lives on the row, which
  * is what the client is polling anyway.
  */
 export async function runExtraction(
   recipeId: number,
   deps?: { complete: Complete },
+  request: { kind: 'capture' } | { kind: 'reread'; userId: string } = {
+    kind: 'capture',
+  },
 ): Promise<void> {
   try {
     const source = db
@@ -462,15 +465,19 @@ export async function runExtraction(
       deps,
     );
     db.transaction(() => {
+      requireAlive(recipeId);
       addVersion(recipeId, {
-        userId: currentCreator(recipeId),
+        userId:
+          request.kind === 'reread' ? request.userId : currentCreator(recipeId),
         content: extracted.content,
         model: extracted.model,
         promptVersion: extracted.promptVersion,
         tokensIn: extracted.tokensIn,
         tokensOut: extracted.tokensOut,
       });
-      setTags(recipeId, extracted.tags);
+      if (request.kind === 'capture') {
+        setTags(recipeId, extracted.tags);
+      }
       setStatus(recipeId, 'ready');
     })();
   } catch (error) {
@@ -566,7 +573,10 @@ export function addVersion(
       at,
     ],
   );
-  db.run('UPDATE recipe SET updatedAt = ? WHERE id = ?', [at, recipeId]);
+  db.run(
+    "UPDATE recipe SET status = 'ready', failureReason = NULL, updatedAt = ? WHERE id = ?",
+    [at, recipeId],
+  );
   return next;
 }
 
@@ -598,13 +608,64 @@ export function edit(
   content: RecipeContent,
 ): number {
   requireAlive(recipeId);
+  if (statusOf(recipeId) === 'pending') {
+    throw ClientError.conflict(
+      'Wait until the source has finished being read.',
+      { recipeId },
+    );
+  }
   return addVersion(recipeId, { userId, content });
+}
+
+/** User-facing tag correction checks the recipe is still available. */
+export function updateTags(recipeId: number, tags: readonly string[]): void {
+  requireAlive(recipeId);
+  if (statusOf(recipeId) === 'pending') {
+    throw ClientError.conflict(
+      'Wait until the source has finished being read.',
+      { recipeId },
+    );
+  }
+  setTags(recipeId, tags);
+}
+
+/** Reuses the permanent source, preserving prior versions and household tags. */
+export function reread(
+  recipeId: number,
+  userId: string,
+  deps?: { complete: Complete },
+): void {
+  requireAlive(recipeId);
+  if (statusOf(recipeId) === 'pending') {
+    throw ClientError.conflict('This one is still being read.', { recipeId });
+  }
+  if (
+    !db
+      .query('SELECT 1 FROM recipeVersion WHERE recipeId = ? LIMIT 1')
+      .get(recipeId)
+  ) {
+    throw ClientError.conflict(
+      'There is no saved recipe yet — retry the original reading.',
+      { recipeId },
+    );
+  }
+  const source = db
+    .query(
+      'SELECT 1 FROM source WHERE recipeId = ? AND path IS NOT NULL LIMIT 1',
+    )
+    .get(recipeId);
+  if (!source) {
+    throw ClientError.conflict('This recipe has no saved source to read.', {
+      recipeId,
+    });
+  }
+  setStatus(recipeId, 'pending');
+  void runExtraction(recipeId, deps, { kind: 'reread', userId });
 }
 
 /**
  * Re-runs a capture that never produced anything. Valid only where no version
- * exists: once a recipe has content, corrections are edits, and there is no
- * such thing as re-extraction.
+ * exists. Rereading a source that already has content is a separate action.
  *
  * @throws {ClientError} 409 when the recipe already has a version, or when a
  *   run is still in flight — a second one would append a second version and

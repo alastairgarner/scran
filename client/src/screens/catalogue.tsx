@@ -330,6 +330,9 @@ function compare(a: RecipeSummary, b: RecipeSummary, sort?: Sort): number {
 
 function summary(recipe: RecipeSummary): string {
   if (recipe.status !== 'ready') {
+    if (recipe.name && recipe.status === 'failed') {
+      return 'Reading failed · saved recipe kept';
+    }
     if (recipe.failureReason === 'no_recipe') {
       return 'Try a photo of a recipe page';
     }

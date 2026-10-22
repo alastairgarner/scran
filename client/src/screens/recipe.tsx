@@ -1,3 +1,4 @@
+import { recipeContentSchema } from '@scran/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
@@ -10,10 +11,13 @@ import {
   recipeKeys,
   recipeOptions,
   retryRecipe,
+  rereadRecipe,
 } from '../api/recipes';
 import { authClient } from '../auth';
 import { scaledIngredient } from '../recipe-logic';
+import { RecipeMenu } from '../recipe-menu';
 import { Button, Modal } from '../ui';
+import { RecipeEditor } from './recipe-editor';
 
 const GLYPH = { 1: '✗', 2: '✓', 3: '✓✓' } as const;
 
@@ -27,7 +31,9 @@ export function Recipe() {
     enabled: Number.isInteger(id) && id > 0,
   });
   const [ingredientsOpen, setIngredientsOpen] = useState(false);
-  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [action, setAction] = useState<'edit' | 'reread' | 'delete' | null>(
+    null,
+  );
   const [factor, setFactor] = useState(1);
   const comment = useForm<{ body: string }>();
 
@@ -66,6 +72,14 @@ export function Recipe() {
     },
   });
 
+  const readAgain = useMutation({
+    mutationFn: () => rereadRecipe(id),
+    onSuccess: async () => {
+      setAction(null);
+      await refresh();
+    },
+  });
+
   if (!Number.isInteger(id) || id < 1) {
     return <State>That recipe does not exist.</State>;
   }
@@ -75,10 +89,10 @@ export function Recipe() {
   if (recipe.error) {
     return <State>{recipe.error.message}</State>;
   }
-  if (recipe.data.status === 'pending') {
+  if (recipe.data.status === 'pending' && !recipe.data.version) {
     return <State>Reading the source…</State>;
   }
-  if (recipe.data.status === 'failed') {
+  if (recipe.data.status === 'failed' && !recipe.data.version) {
     const noRecipe = recipe.data.failureReason === 'no_recipe';
     return (
       <State>
@@ -151,6 +165,20 @@ export function Recipe() {
     return <State>This recipe has no version.</State>;
   }
 
+  if (action === 'edit') {
+    return (
+      <RecipeEditor
+        id={id}
+        content={recipeContentSchema.parse(version)}
+        tags={recipe.data.tags}
+        onClose={() => {
+          setAction(null);
+          setFactor(1);
+        }}
+      />
+    );
+  }
+
   const ownRating = recipe.data.ratings.find(
     item => item.userId === session.data?.user.id,
   )?.score;
@@ -165,50 +193,91 @@ export function Recipe() {
           >
             ← All recipes
           </Link>
-          {recipe.data.createdByUserId === session.data?.user.id && (
-            <button
-              type="button"
-              onClick={() => setDeleteOpen(true)}
-              className="text-danger min-h-11 underline"
-            >
-              Delete recipe
-            </button>
-          )}
+          <RecipeMenu
+            disabled={
+              recipe.data.status === 'pending' ||
+              remove.isPending ||
+              readAgain.isPending
+            }
+            canRead={recipe.data.sources.length > 0}
+            onEdit={() => setAction('edit')}
+            onRead={() => setAction('reread')}
+            onDelete={
+              recipe.data.createdByUserId === session.data?.user.id
+                ? () => setAction('delete')
+                : null
+            }
+          />
         </div>
         <Modal
-          open={deleteOpen}
-          label="Delete recipe"
-          onClose={() => setDeleteOpen(false)}
+          open={action === 'delete' || action === 'reread'}
+          label={action === 'delete' ? 'Delete recipe' : 'Read source again'}
+          onClose={() => setAction(null)}
         >
           <div className="space-y-4 p-6">
-            <h2 className="type-title font-bold">Delete this recipe?</h2>
+            <h2 className="type-title font-bold">
+              {action === 'delete'
+                ? 'Delete this recipe?'
+                : 'Read the source again?'}
+            </h2>
             <p>
-              “{version.name}” will be removed from the household’s catalogue.
+              {action === 'delete'
+                ? `“${version.name}” will be removed from the household’s catalogue.`
+                : 'The saved photo or webpage will be read again. A successful reading replaces the current content, including any edits. Previous versions are kept; if reading fails, this recipe stays as it is.'}
             </p>
-            {remove.error && (
+            {(action === 'delete' ? remove.error : readAgain.error) && (
               <p role="alert" className="text-danger">
-                {remove.error.message}
+                {action === 'delete'
+                  ? remove.error?.message
+                  : readAgain.error?.message}
               </p>
             )}
             <div className="flex justify-end gap-3">
               <button
                 type="button"
-                disabled={remove.isPending}
-                onClick={() => setDeleteOpen(false)}
+                disabled={remove.isPending || readAgain.isPending}
+                onClick={() => setAction(null)}
                 className="text-ink-muted min-h-11 px-4 underline disabled:opacity-50"
               >
                 Cancel
               </button>
               <Button
                 type="button"
-                disabled={remove.isPending}
-                onClick={() => remove.mutate()}
+                disabled={remove.isPending || readAgain.isPending}
+                onClick={() =>
+                  action === 'delete' ? remove.mutate() : readAgain.mutate()
+                }
               >
-                {remove.isPending ? 'Deleting…' : 'Delete recipe'}
+                {action === 'delete'
+                  ? remove.isPending
+                    ? 'Deleting…'
+                    : 'Delete recipe'
+                  : readAgain.isPending
+                    ? 'Starting…'
+                    : 'Read source again'}
               </Button>
             </div>
           </div>
         </Modal>
+        {recipe.data.status === 'pending' && (
+          <p
+            role="status"
+            className="rounded-ui border-line bg-panel my-4 border p-4"
+          >
+            Reading the source again… You can keep using the saved recipe below.
+          </p>
+        )}
+        {recipe.data.status === 'failed' && (
+          <p
+            role="status"
+            className="rounded-ui border-line bg-panel my-4 border p-4"
+          >
+            {recipe.data.failureReason === 'no_recipe'
+              ? 'No readable recipe was found in the source.'
+              : 'We couldn’t read the source again.'}{' '}
+            Your saved recipe is unchanged.
+          </p>
+        )}
         <h1 className="type-title font-bold">{version.name}</h1>
         <p className="type-label text-ink-muted mt-2">
           {[

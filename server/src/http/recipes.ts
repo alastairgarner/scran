@@ -13,6 +13,7 @@ import {
   photoRotationSchema,
   ratingSchema,
   recipeContentSchema,
+  TAG_IDS,
 } from '@scran/shared';
 import { Hono } from 'hono';
 import { z } from 'zod';
@@ -140,12 +141,28 @@ export const recipeRoutes = new Hono<AppEnv>()
       }),
   )
 
-  /** Only for a capture that produced nothing. There is no re-extraction. */
+  /** Only for a capture that produced nothing. */
   .post('/api/recipes/:id/retry', idParam, c => {
     const { id } = c.req.valid('param');
     recipes.retry(id);
     return c.json({ id, status: 'pending' as const }, 202);
   })
+
+  .post('/api/recipes/:id/reread', idParam, c => {
+    const { id } = c.req.valid('param');
+    recipes.reread(id, c.get('user').id);
+    return c.json({ id, status: 'pending' as const }, 202);
+  })
+
+  .put(
+    '/api/recipes/:id/tags',
+    idParam,
+    zValidator('json', z.object({ tags: z.array(z.enum(TAG_IDS)) })),
+    c => {
+      recipes.updateTags(c.req.valid('param').id, c.req.valid('json').tags);
+      return c.body(null, 204);
+    },
+  )
 
   .delete('/api/recipes/:id', idParam, c => {
     recipes.softDelete(c.req.valid('param').id, c.get('user').id);

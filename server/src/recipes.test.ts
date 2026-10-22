@@ -14,10 +14,12 @@ import {
   list,
   photo as photoSource,
   retry,
+  reread,
   runExtraction,
   setTags,
   softDelete,
   sweepStalePending,
+  versions,
 } from './recipes';
 import { readSource } from './storage';
 import {
@@ -377,6 +379,102 @@ describe('capture', () => {
 
     // Assert — and now there is content, so re-extraction is refused.
     expect(() => retry(id)).toThrow('already has content');
+  });
+});
+
+describe('read source again', () => {
+  const waitForReading = async (id: number) => {
+    for (let i = 0; i < 50 && get(id).status === 'pending'; i++) {
+      await Bun.sleep(10);
+    }
+    expect(get(id).status).not.toBe('pending');
+  };
+
+  it('appends a version attributed to the requester while preserving earlier content and tags', async () => {
+    const owner = await person();
+    const reader = await person();
+    const { id } = await capture(owner, { kind: 'photo', data: photo() });
+    addVersion(id, {
+      userId: owner,
+      content: content('Hand-corrected recipe'),
+    });
+    setTags(id, ['main']);
+    const recorded = recordedComplete();
+    let release = () => {};
+    const gate = new Promise<void>(resolve => {
+      release = resolve;
+    });
+    reread(id, reader, {
+      complete: async request => {
+        await gate;
+        return recorded(request);
+      },
+    });
+
+    expect(get(id)).toMatchObject({
+      status: 'pending',
+      version: { name: 'Hand-corrected recipe' },
+    });
+    expect(() => reread(id, reader)).toThrow('still being read');
+    expect(() => edit(id, owner, content('Conflicting edit'))).toThrow(
+      'finished being read',
+    );
+    release();
+    await waitForReading(id);
+
+    expect(get(id)).toMatchObject({
+      status: 'ready',
+      tags: ['main'],
+      version: {
+        versionNo: 2,
+        name: 'Chocolate Chip Muffins',
+        createdByUserId: reader,
+      },
+    });
+    expect(versions(id).map(version => version.name)).toEqual([
+      'Chocolate Chip Muffins',
+      'Hand-corrected recipe',
+    ]);
+  });
+
+  it('keeps the prior version when the reader finds no recipe or fails, and permits correction afterwards', async () => {
+    for (const json of ['null', 'not json']) {
+      const owner = await person();
+      const { id } = await capture(owner, { kind: 'photo', data: photo() });
+      addVersion(id, { userId: owner, content: content('Saved recipe') });
+      reread(id, owner, {
+        complete: async () => ({
+          model: 'test',
+          json,
+          tokensIn: 1,
+          tokensOut: 1,
+        }),
+      });
+      await waitForReading(id);
+      expect(get(id)).toMatchObject({
+        status: 'failed',
+        version: { name: 'Saved recipe', versionNo: 1 },
+      });
+      expect(versions(id)).toHaveLength(1);
+      edit(id, owner, content('Corrected recipe'));
+      expect(get(id)).toMatchObject({
+        status: 'ready',
+        failureReason: null,
+        version: { name: 'Corrected recipe', versionNo: 2 },
+      });
+    }
+  });
+
+  it('refuses rereading a recipe without a source, or one that was deleted', async () => {
+    const owner = await person();
+    const { id } = await capture(owner, { kind: 'photo', data: photo() });
+    db.run("UPDATE recipe SET status = 'failed' WHERE id = ?", [id]);
+    expect(() => reread(id, owner)).toThrow('no saved recipe yet');
+    addVersion(id, { userId: owner, content: content('Saved recipe') });
+    db.run('DELETE FROM source WHERE recipeId = ?', [id]);
+    expect(() => reread(id, owner)).toThrow('no saved source');
+    softDelete(id, owner);
+    expect(() => reread(id, owner)).toThrow('No such recipe');
   });
 });
 

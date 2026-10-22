@@ -83,6 +83,67 @@ async function captureRecipe(request: Awaited<ReturnType<typeof asPerson>>) {
 }
 
 describe('the recipe API', () => {
+  it('reads a saved source again as a new version and keeps household tags', async () => {
+    const request = await asPerson();
+    const { id } = await captureRecipe(request);
+    expect(
+      (
+        await request(`/api/recipes/${id}/tags`, {
+          method: 'PUT',
+          body: JSON.stringify({ tags: ['main', 'vegan'] }),
+        })
+      ).status,
+    ).toBe(204);
+    const before = await (await request(`/api/recipes/${id}/versions`)).json();
+    expect(before).toHaveLength(1);
+    await withoutOpenAI(async () => {
+      const response = await request(`/api/recipes/${id}/reread`, {
+        method: 'POST',
+      });
+      expect(response.status).toBe(202);
+      let result;
+      for (let attempt = 0; attempt < 50; attempt++) {
+        result = await (await request(`/api/recipes/${id}`)).json();
+        if (result.status !== 'pending') {
+          break;
+        }
+        await Bun.sleep(10);
+      }
+      expect(result).toMatchObject({
+        status: 'ready',
+        version: { versionNo: 2 },
+        tags: ['main', 'vegan', 'vegetarian'],
+      });
+    });
+    expect(
+      await (await request(`/api/recipes/${id}/versions`)).json(),
+    ).toHaveLength(2);
+  });
+
+  it('validates tag corrections without appending recipe versions', async () => {
+    const request = await asPerson();
+    const { id } = await captureRecipe(request);
+    expect(
+      (
+        await request(`/api/recipes/${id}/tags`, {
+          method: 'PUT',
+          body: JSON.stringify({ tags: ['invented'] }),
+        })
+      ).status,
+    ).toBe(400);
+    expect(
+      (
+        await request(`/api/recipes/${id}/tags`, {
+          method: 'PUT',
+          body: JSON.stringify({ tags: ['side'] }),
+        })
+      ).status,
+    ).toBe(204);
+    const recipe = await (await request(`/api/recipes/${id}`)).json();
+    expect(recipe.tags).toEqual(['side']);
+    expect(recipe.version.versionNo).toBe(1);
+  });
+
   it('previews a photo without creating a recipe and rejects unreadable images', async () => {
     const request = await asPerson();
     const before = await (await request('/api/recipes')).json();
@@ -295,7 +356,7 @@ describe('the recipe API', () => {
       method: 'POST',
     });
 
-    // Assert — corrections are edits; there is no re-extraction.
+    // Initial retries remain separate from reading an existing recipe again.
     expect(response.status).toBe(409);
   });
 

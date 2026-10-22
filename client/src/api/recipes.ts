@@ -1,4 +1,4 @@
-import type { PhotoRotation } from '@scran/shared';
+import type { PhotoRotation, RecipeContent, TagId } from '@scran/shared';
 import { queryOptions } from '@tanstack/react-query';
 
 import { api, errorMessage } from './client';
@@ -69,6 +69,35 @@ export async function retryRecipe(id: number) {
 export async function deleteRecipe(id: number) {
   const response = await api.api.recipes[':id'].$delete({
     param: { id: String(id) },
+  });
+  if (!response.ok) {
+    throw new Error(await errorMessage(response));
+  }
+}
+
+export async function rereadRecipe(id: number) {
+  const response = await api.api.recipes[':id'].reread.$post({
+    param: { id: String(id) },
+  });
+  if (!response.ok) {
+    throw new Error(await errorMessage(response));
+  }
+}
+
+export async function editRecipe(id: number, content: RecipeContent) {
+  const response = await api.api.recipes[':id'].versions.$post({
+    param: { id: String(id) },
+    json: content,
+  });
+  if (!response.ok) {
+    throw new Error(await errorMessage(response));
+  }
+}
+
+export async function updateRecipeTags(id: number, tags: TagId[]) {
+  const response = await api.api.recipes[':id'].tags.$put({
+    param: { id: String(id) },
+    json: { tags },
   });
   if (!response.ok) {
     throw new Error(await errorMessage(response));
