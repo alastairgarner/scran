@@ -13,7 +13,7 @@ import {
 } from '../api/recipes';
 import { authClient } from '../auth';
 import { scaledIngredient } from '../recipe-logic';
-import { Button } from '../ui';
+import { Button, Modal } from '../ui';
 
 const GLYPH = { 1: '✗', 2: '✓', 3: '✓✓' } as const;
 
@@ -27,6 +27,7 @@ export function Recipe() {
     enabled: Number.isInteger(id) && id > 0,
   });
   const [ingredientsOpen, setIngredientsOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const [factor, setFactor] = useState(1);
   const comment = useForm<{ body: string }>();
 
@@ -157,12 +158,57 @@ export function Recipe() {
   return (
     <main className="bottom-sheet-clearance mx-auto max-w-2xl lg:grid lg:h-dvh lg:max-w-6xl lg:grid-cols-[minmax(18rem,22rem)_minmax(0,1fr)] lg:overflow-hidden lg:pb-0">
       <article className="px-4 pt-4 lg:col-start-2 lg:row-start-1 lg:h-dvh lg:overflow-y-auto lg:px-8 lg:pt-8">
-        <Link
-          to="/"
-          className="text-ink-muted inline-flex min-h-11 items-center"
+        <div className="flex items-center justify-between gap-4">
+          <Link
+            to="/"
+            className="text-ink-muted inline-flex min-h-11 items-center"
+          >
+            ← All recipes
+          </Link>
+          {recipe.data.createdByUserId === session.data?.user.id && (
+            <button
+              type="button"
+              onClick={() => setDeleteOpen(true)}
+              className="text-danger min-h-11 underline"
+            >
+              Delete recipe
+            </button>
+          )}
+        </div>
+        <Modal
+          open={deleteOpen}
+          label="Delete recipe"
+          onClose={() => setDeleteOpen(false)}
         >
-          ← All recipes
-        </Link>
+          <div className="space-y-4 p-6">
+            <h2 className="type-title font-bold">Delete this recipe?</h2>
+            <p>
+              “{version.name}” will be removed from the household’s catalogue.
+            </p>
+            {remove.error && (
+              <p role="alert" className="text-danger">
+                {remove.error.message}
+              </p>
+            )}
+            <div className="flex justify-end gap-3">
+              <button
+                type="button"
+                disabled={remove.isPending}
+                onClick={() => setDeleteOpen(false)}
+                className="text-ink-muted min-h-11 px-4 underline disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <Button
+                type="button"
+                disabled={remove.isPending}
+                onClick={() => remove.mutate()}
+              >
+                {remove.isPending ? 'Deleting…' : 'Delete recipe'}
+              </Button>
+            </div>
+          </div>
+        </Modal>
         <h1 className="type-title font-bold">{version.name}</h1>
         <p className="type-label text-ink-muted mt-2">
           {[
