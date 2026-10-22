@@ -1,5 +1,6 @@
 import { TAGS, type TagId } from '@scran/shared';
 import { useQuery } from '@tanstack/react-query';
+import { useLayoutEffect, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router';
 
 import { listRecipes, type RecipeSummary, recipeKeys } from '../api/recipes';
@@ -23,6 +24,29 @@ const SPEED_LABEL: Record<Speed, string> = {
 };
 
 export function Catalogue() {
+  const viewportRef = useRef<HTMLElement>(null);
+
+  useLayoutEffect(() => {
+    const viewport = window.visualViewport;
+    const element = viewportRef.current;
+    if (!viewport || !element) {
+      return;
+    }
+    // Mobile keyboards resize/pan the visual viewport, not necessarily the
+    // layout viewport used by position:fixed and dvh (Android and iOS).
+    const sync = () => {
+      element.style.setProperty('--catalogue-height', `${viewport.height}px`);
+      element.style.setProperty('--catalogue-top', `${viewport.offsetTop}px`);
+    };
+    sync();
+    viewport.addEventListener('resize', sync);
+    viewport.addEventListener('scroll', sync);
+    return () => {
+      viewport.removeEventListener('resize', sync);
+      viewport.removeEventListener('scroll', sync);
+    };
+  }, []);
+
   const session = authClient.useSession();
   const [params, setParams] = useSearchParams();
   const query = params.get('q') ?? '';
@@ -108,101 +132,111 @@ export function Catalogue() {
   );
 
   return (
-    <main className="bottom-clearance mx-auto max-w-3xl md:pb-8">
-      <header className="md:border-line md:bg-background/95 px-4 pt-6 md:sticky md:top-0 md:z-10 md:border-b md:pb-3 md:backdrop-blur">
-        <div className="flex items-center justify-between gap-4">
-          <h1 className="type-title font-bold">scran</h1>
-          <span className="type-label text-ink-muted ml-auto">
-            {visible.length} {visible.length === 1 ? 'recipe' : 'recipes'}
-          </span>
-          <Link
-            to="/capture"
-            className="rounded-pill bg-accent text-accent-ink hidden px-4 py-2 font-semibold md:block"
-          >
-            + Add recipe
-          </Link>
-        </div>
-        <div className="mt-3 hidden md:block">{controls}</div>
-      </header>
+    <main
+      ref={viewportRef}
+      className="catalogue-shell mx-auto w-full max-w-3xl md:pb-8"
+    >
+      <div className="catalogue-results">
+        <header className="md:border-line md:bg-background/95 px-4 pt-6 md:sticky md:top-0 md:z-10 md:border-b md:pb-3 md:backdrop-blur">
+          <div className="flex items-center justify-between gap-4">
+            <h1 className="type-title font-bold">scran</h1>
+            <span className="type-label text-ink-muted ml-auto">
+              {visible.length} {visible.length === 1 ? 'recipe' : 'recipes'}
+            </span>
+            <Link
+              to="/capture"
+              className="rounded-pill bg-accent text-accent-ink hidden px-4 py-2 font-semibold md:block"
+            >
+              + Add recipe
+            </Link>
+          </div>
+          <div className="mt-3 hidden md:block">{controls}</div>
+        </header>
 
-      {active > 0 && (
-        <div className="flex gap-2 overflow-x-auto px-4 py-3">
-          {sort && (
-            <ActiveChip onClick={() => update('sort')}>
-              {SORT_LABEL[sort]} ×
-            </ActiveChip>
-          )}
-          {scope === 'me' && (
-            <ActiveChip onClick={() => update('scope')}>Me ×</ActiveChip>
-          )}
-          {speed && (
-            <ActiveChip onClick={() => update('speed')}>
-              {SPEED_LABEL[speed]} ×
-            </ActiveChip>
-          )}
-          {floor && (
-            <ActiveChip onClick={() => update('rating')}>
-              {GLYPH[floorScore(floor)]}+ ×
-            </ActiveChip>
-          )}
-          {tags.map(tag => (
-            <ActiveChip key={tag} onClick={() => toggleTag(tag)}>
-              {TAGS.find(item => item.id === tag)?.label} ×
-            </ActiveChip>
-          ))}
-        </div>
-      )}
+        {active > 0 && (
+          <div className="flex gap-2 overflow-x-auto px-4 py-3">
+            {sort && (
+              <ActiveChip onClick={() => update('sort')}>
+                {SORT_LABEL[sort]} ×
+              </ActiveChip>
+            )}
+            {scope === 'me' && (
+              <ActiveChip onClick={() => update('scope')}>Me ×</ActiveChip>
+            )}
+            {speed && (
+              <ActiveChip onClick={() => update('speed')}>
+                {SPEED_LABEL[speed]} ×
+              </ActiveChip>
+            )}
+            {floor && (
+              <ActiveChip onClick={() => update('rating')}>
+                {GLYPH[floorScore(floor)]}+ ×
+              </ActiveChip>
+            )}
+            {tags.map(tag => (
+              <ActiveChip key={tag} onClick={() => toggleTag(tag)}>
+                {TAGS.find(item => item.id === tag)?.label} ×
+              </ActiveChip>
+            ))}
+          </div>
+        )}
 
-      {recipes.isPending && (
-        <p className="text-ink-muted p-12 text-center">Loading recipes…</p>
-      )}
-      {recipes.error && (
-        <p className="text-danger p-12 text-center">{recipes.error.message}</p>
-      )}
-      {!recipes.isPending && !recipes.error && (
-        <ul>
-          {visible.map(recipe => {
-            const mark = aggregate(recipe, scope, session.data?.user.id ?? '');
-            return (
-              <li key={recipe.id}>
-                <Link
-                  to={`/recipes/${recipe.id}`}
-                  className="border-line flex min-h-20 items-center gap-4 border-b px-4 py-4"
-                >
-                  <div className="min-w-0 flex-1">
-                    <p className="type-body font-semibold">
-                      {recipe.name ?? statusName(recipe)}
-                    </p>
-                    <p className="type-label text-ink-muted mt-1 truncate">
-                      {summary(recipe)}
-                    </p>
-                  </div>
-                  {mark && (
-                    <span
-                      className={`type-body shrink-0 ${mark === 1 ? 'text-danger' : 'text-success'}`}
-                    >
-                      {GLYPH[mark]}
-                    </span>
-                  )}
-                </Link>
+        {recipes.isPending && (
+          <p className="text-ink-muted p-12 text-center">Loading recipes…</p>
+        )}
+        {recipes.error && (
+          <p className="text-danger p-12 text-center">
+            {recipes.error.message}
+          </p>
+        )}
+        {!recipes.isPending && !recipes.error && (
+          <ul>
+            {visible.map(recipe => {
+              const mark = aggregate(
+                recipe,
+                scope,
+                session.data?.user.id ?? '',
+              );
+              return (
+                <li key={recipe.id}>
+                  <Link
+                    to={`/recipes/${recipe.id}`}
+                    className="border-line flex min-h-20 items-center gap-4 border-b px-4 py-4"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="type-body font-semibold">
+                        {recipe.name ?? statusName(recipe)}
+                      </p>
+                      <p className="type-label text-ink-muted mt-1 truncate">
+                        {summary(recipe)}
+                      </p>
+                    </div>
+                    {mark && (
+                      <span
+                        className={`type-body shrink-0 ${mark === 1 ? 'text-danger' : 'text-success'}`}
+                      >
+                        {GLYPH[mark]}
+                      </span>
+                    )}
+                  </Link>
+                </li>
+              );
+            })}
+            {visible.length === 0 && (
+              <li className="text-ink-muted p-12 text-center">
+                Nothing matches.
               </li>
-            );
-          })}
-          {visible.length === 0 && (
-            <li className="text-ink-muted p-12 text-center">
-              Nothing matches.
-            </li>
-          )}
-        </ul>
-      )}
-
-      <div className="bottom-safe border-line bg-panel fixed inset-x-0 bottom-0 z-20 border-t px-4 pt-3 md:hidden">
+            )}
+          </ul>
+        )}
+      </div>
+      <div className="catalogue-controls bottom-safe border-line bg-panel z-20 shrink-0 border-t px-4 pt-3 md:hidden">
         {controls}
       </div>
       <Link
         to="/capture"
         aria-label="Add a recipe"
-        className="type-title rounded-pill bg-accent text-accent-ink shadow-card fixed right-4 bottom-24 z-30 grid h-16 w-16 place-items-center md:hidden"
+        className="catalogue-add type-title rounded-pill bg-accent text-accent-ink shadow-card absolute right-4 bottom-24 z-30 grid h-16 w-16 place-items-center md:hidden"
       >
         +
       </Link>

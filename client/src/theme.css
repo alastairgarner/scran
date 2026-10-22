@@ -105,6 +105,40 @@
   padding-bottom: 8rem;
 }
 
+/* Keep the document still while the catalogue's results scroll. The visual
+   viewport variables also cover browsers where the keyboard overlays dvh. */
+@media (width < 48rem) {
+  body:has(.catalogue-shell) {
+    overflow: hidden;
+    min-height: 0;
+  }
+
+  .catalogue-shell {
+    position: fixed;
+    inset-inline: 0;
+    top: var(--catalogue-top, 0px);
+    height: var(--catalogue-height, 100dvh);
+    display: flex;
+    flex-direction: column;
+  }
+
+  .catalogue-results {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+    padding-bottom: 6rem;
+  }
+
+  .catalogue-shell:has(.catalogue-controls input:focus) .catalogue-add {
+    display: none;
+  }
+
+  .catalogue-shell:has(.catalogue-controls input:focus) .catalogue-results {
+    padding-bottom: 0;
+  }
+}
+
 @layer base {
   * {
     box-sizing: border-box;
