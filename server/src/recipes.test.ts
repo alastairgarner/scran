@@ -12,6 +12,7 @@ import {
   ftsQuery,
   get,
   list,
+  photo as photoSource,
   retry,
   runExtraction,
   setTags,
@@ -251,6 +252,42 @@ describe('capture', () => {
 
     // Assert
     expect(error).toMatchObject({ type: 'dependency', retryable: true });
+  });
+
+  it('keeps a non-recipe source without creating recipe content, and can retry', async () => {
+    const userId = await person();
+    const { id, sourceId } = await capture(userId, {
+      kind: 'photo',
+      data: photo(),
+    });
+    await runExtraction(id, {
+      complete: async () => ({
+        model: 'test',
+        json: 'null',
+        tokensIn: 1,
+        tokensOut: 1,
+      }),
+    });
+
+    expect(get(id)).toMatchObject({
+      status: 'failed',
+      failureReason: 'no_recipe',
+      version: null,
+      tags: [],
+    });
+    expect(list().find(recipe => recipe.id === id)?.failureReason).toBe(
+      'no_recipe',
+    );
+    expect(await photoSource(sourceId).arrayBuffer()).toEqual(
+      await photo().arrayBuffer(),
+    );
+
+    retry(id, { complete: recordedComplete() });
+    expect(get(id).failureReason).toBeNull();
+    for (let i = 0; i < 50 && get(id).status === 'pending'; i++) {
+      await Bun.sleep(10);
+    }
+    expect(get(id)).toMatchObject({ status: 'ready', failureReason: null });
   });
 
   it('runs the model behind the request and lands a ready recipe', async () => {

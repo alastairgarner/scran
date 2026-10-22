@@ -66,6 +66,15 @@ export async function retryRecipe(id: number) {
   }
 }
 
+export async function deleteRecipe(id: number) {
+  const response = await api.api.recipes[':id'].$delete({
+    param: { id: String(id) },
+  });
+  if (!response.ok) {
+    throw new Error(await errorMessage(response));
+  }
+}
+
 export async function capturePhoto(photo: File, rotation: PhotoRotation = 0) {
   const form = new FormData();
   form.append('photo', photo);

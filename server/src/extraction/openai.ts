@@ -36,7 +36,14 @@ export type Complete = (request: CompleteRequest) => Promise<Completion>;
  * emits `additionalProperties: false` with every property required, which is
  * exactly what strict mode demands. So the contract is defined once.
  */
-const jsonSchema = z.toJSONSchema(extractionSchema, { target: 'draft-7' });
+const responseSchema = z.object({
+  recipe: extractionSchema
+    .nullable()
+    .describe(
+      'The recipe visible in the source. Return null if there is no readable recipe. Never invent a recipe from a photo of food or an unrelated image.',
+    ),
+});
+const jsonSchema = z.toJSONSchema(responseSchema, { target: 'draft-7' });
 
 const IMAGE_PROMPT_PATH = new URL(
   './prompts/parse-recipe-image.txt',
@@ -67,7 +74,7 @@ export const complete: Complete = async request => {
       ? [
           {
             type: 'text',
-            text: 'Please extract the recipe from the image provided. There should be exactly one recipe.',
+            text: 'Extract the recipe written in this image, or return recipe: null if there is no readable recipe.',
           },
           {
             type: 'image_url',
@@ -112,9 +119,15 @@ export const complete: Complete = async request => {
     usage: { prompt_tokens: number; completion_tokens: number };
   };
   const body = (await response.json()) as ChatCompletion;
+  const result = responseSchema.safeParse(
+    JSON.parse(body.choices[0]?.message?.content ?? 'null'),
+  );
+  if (!result.success) {
+    throw AppError.dependency('The recipe reader returned the wrong shape.');
+  }
   return {
     model: config.openaiModel,
-    json: body.choices[0]?.message?.content ?? '',
+    json: JSON.stringify(result.data.recipe),
     tokensIn: body.usage.prompt_tokens,
     tokensOut: body.usage.completion_tokens,
   };

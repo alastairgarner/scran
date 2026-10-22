@@ -66,7 +66,9 @@ export async function withoutOpenAI<T>(
     const url = String(input instanceof Request ? input.url : input);
     if (url.includes('openai')) {
       return Response.json({
-        choices: [{ message: { content: JSON.stringify(entry.recipe) } }],
+        choices: [
+          { message: { content: JSON.stringify({ recipe: entry.recipe }) } },
+        ],
         usage: { prompt_tokens: 1, completion_tokens: 1 },
       });
     }

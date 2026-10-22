@@ -30,6 +30,14 @@ export type Extracted = {
   tokensOut: number;
 };
 
+/** An understood source with no recipe, rather than a reader outage. */
+export class NoRecipeFound extends Error {
+  constructor() {
+    super('No readable recipe was found in this source.');
+    this.name = 'NoRecipeFound';
+  }
+}
+
 const JSON_LD =
   /<script\b[^>]*\btype\s*=\s*(["'])application\/ld\+json\1[^>]*>([\s\S]*?)<\/script>/gi;
 
@@ -139,7 +147,7 @@ function htmlForModel(html: string): string {
     }
   }
 
-  throw AppError.dependency('The webpage had no readable recipe content.');
+  throw new NoRecipeFound();
 }
 
 /**
@@ -174,12 +182,24 @@ export async function extract(
     );
   }
 
+  if (parsed === null) {
+    throw new NoRecipeFound();
+  }
   const result = extractionSchema.safeParse(parsed);
   if (!result.success) {
     throw AppError.dependency('The recipe reader returned the wrong shape.', {
       model: completion.model,
       issues: result.error.issues.slice(0, 5),
     });
+  }
+
+  if (
+    !result.data.name.trim() ||
+    ![...result.data.ingredients, ...result.data.instructions].some(line =>
+      line.text.trim(),
+    )
+  ) {
+    throw new NoRecipeFound();
   }
 
   return {

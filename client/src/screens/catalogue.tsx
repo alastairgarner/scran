@@ -171,7 +171,7 @@ export function Catalogue() {
                 >
                   <div className="min-w-0 flex-1">
                     <p className="type-body font-semibold">
-                      {recipe.name ?? statusName(recipe.status)}
+                      {recipe.name ?? statusName(recipe)}
                     </p>
                     <p className="type-label text-ink-muted mt-1 truncate">
                       {summary(recipe)}
@@ -330,6 +330,9 @@ function compare(a: RecipeSummary, b: RecipeSummary, sort?: Sort): number {
 
 function summary(recipe: RecipeSummary): string {
   if (recipe.status !== 'ready') {
+    if (recipe.failureReason === 'no_recipe') {
+      return 'Try a photo of a recipe page';
+    }
     return recipe.status === 'pending'
       ? 'Reading source…'
       : 'Extraction failed';
@@ -340,8 +343,11 @@ function summary(recipe: RecipeSummary): string {
   return [time, ...recipe.tags].filter(Boolean).join(' · ');
 }
 
-function statusName(status: RecipeSummary['status']): string {
-  return status === 'pending' ? 'New recipe' : 'Unread recipe';
+function statusName(recipe: RecipeSummary): string {
+  if (recipe.failureReason === 'no_recipe') {
+    return 'No recipe found';
+  }
+  return recipe.status === 'pending' ? 'New recipe' : 'Unread recipe';
 }
 
 function FilterGroup({

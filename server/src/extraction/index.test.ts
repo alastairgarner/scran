@@ -5,7 +5,7 @@ import { extractionSchema } from '@scran/shared';
 import { AppError } from '../errors';
 import { RECORDED_PHOTOS, recordedComplete } from '../testing';
 import webpage from './fixtures/webpage.json';
-import { extract } from './index';
+import { extract, NoRecipeFound } from './index';
 
 const photo = new Blob([new Uint8Array([1, 2, 3])], { type: 'image/jpeg' });
 const source = { kind: 'photo' as const, photo };
@@ -22,6 +22,53 @@ const recordedRecipe = async () =>
   );
 
 describe('extract', () => {
+  it('recognises a source with no recipe', async () => {
+    const complete = async () => ({
+      model: 'test',
+      json: 'null',
+      tokensIn: 1,
+      tokensOut: 1,
+    });
+    const error = await extract(source, { complete }).catch(cause => cause);
+    expect(error).toBeInstanceOf(NoRecipeFound);
+  });
+
+  it('rejects an empty recipe instead of saving a misleading version', async () => {
+    const complete = async () => ({
+      model: 'test',
+      json: JSON.stringify({
+        ...(await recordedRecipe()),
+        ingredients: [
+          {
+            title: null,
+            text: '  ',
+            quantity: null,
+            unit: null,
+            food: null,
+            note: null,
+          },
+        ],
+        instructions: [],
+      }),
+      tokensIn: 1,
+      tokensOut: 1,
+    });
+    const error = await extract(source, { complete }).catch(cause => cause);
+    expect(error).toBeInstanceOf(NoRecipeFound);
+  });
+
+  it('preserves a readable recipe fragment without inventing missing steps', async () => {
+    const complete = async () => ({
+      model: 'test',
+      json: JSON.stringify({ ...(await recordedRecipe()), instructions: [] }),
+      tokensIn: 1,
+      tokensOut: 1,
+    });
+    const result = await extract(source, { complete });
+    expect(result.content.ingredients.length).toBeGreaterThan(0);
+    expect(result.content.instructions).toEqual([]);
+  });
+
   it('maps a real reply onto the stored shape', async () => {
     // Act
     const result = await extract(source, { complete: recordedComplete() });

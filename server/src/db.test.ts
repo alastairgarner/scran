@@ -38,6 +38,7 @@ describe('migrate', () => {
       '001-init.sql',
       '002-tags-and-time.sql',
       '003-source-rotation.sql',
+      '004-extraction-failure-reason.sql',
     ]);
     expect(tableNames(db)).toEqual(
       expect.arrayContaining([

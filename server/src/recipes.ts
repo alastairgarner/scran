@@ -24,7 +24,7 @@ import { normaliseTags, TAGS } from '@scran/shared';
 
 import { db } from './db';
 import { AppError, ClientError } from './errors';
-import { extract } from './extraction';
+import { extract, NoRecipeFound } from './extraction';
 import type { Complete } from './extraction/openai';
 import { preparePhoto } from './extraction/photo';
 import { logger } from './logger';
@@ -474,6 +474,10 @@ export async function runExtraction(
       setStatus(recipeId, 'ready');
     })();
   } catch (error) {
+    if (error instanceof NoRecipeFound) {
+      setStatus(recipeId, 'failed', 'no_recipe');
+      return;
+    }
     setStatus(recipeId, 'failed');
     logger.error({ recipeId, err: error }, 'Extraction failed');
   }
@@ -490,12 +494,15 @@ function currentCreator(recipeId: number): string {
   return row.createdByUserId;
 }
 
-function setStatus(recipeId: number, status: RecipeStatus): void {
-  db.run('UPDATE recipe SET status = ?, updatedAt = ? WHERE id = ?', [
-    status,
-    now(),
-    recipeId,
-  ]);
+function setStatus(
+  recipeId: number,
+  status: RecipeStatus,
+  failureReason: 'no_recipe' | null = null,
+): void {
+  db.run(
+    'UPDATE recipe SET status = ?, failureReason = ?, updatedAt = ? WHERE id = ?',
+    [status, failureReason, now(), recipeId],
+  );
 }
 
 /**
@@ -655,13 +662,14 @@ function requireAlive(recipeId: number): { createdByUserId: string } {
 export function get(recipeId: number) {
   const recipe = db
     .query(
-      `SELECT id, status, createdByUserId, createdAt, updatedAt
+      `SELECT id, status, failureReason, createdByUserId, createdAt, updatedAt
        FROM recipe WHERE id = ? AND deletedAt IS NULL`,
     )
     .get(recipeId) as
     | {
         id: number;
         status: RecipeStatus;
+        failureReason: 'no_recipe' | null;
         createdByUserId: string;
         createdAt: string;
         updatedAt: string;
@@ -719,6 +727,7 @@ export function get(recipeId: number) {
 type ListRow = {
   id: number;
   status: RecipeStatus;
+  failureReason: 'no_recipe' | null;
   createdAt: string;
   name: string | null;
   totalMinutes: number | null;
@@ -742,7 +751,7 @@ export function list(query?: string) {
   const rows = db
     .query(
       `${match ? 'WITH hit AS (SELECT rowid AS id, rank FROM recipeSearch WHERE recipeSearch MATCH ?)' : ''}
-       SELECT r.id, r.status, r.createdAt, v.name, v.totalMinutes, v.timeEstimated,
+       SELECT r.id, r.status, r.failureReason, r.createdAt, v.name, v.totalMinutes, v.timeEstimated,
               (SELECT json_group_array(tag) FROM recipeTag WHERE recipeId = r.id) AS tags,
               (SELECT json_group_array(json_object('userId', userId, 'score', score))
                FROM rating WHERE recipeId = r.id) AS ratings

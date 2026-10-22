@@ -1,10 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { Link, useParams } from 'react-router';
+import { Link, useNavigate, useParams } from 'react-router';
 
 import {
   commentOnRecipe,
+  deleteRecipe,
   rateRecipe,
   recipeKeys,
   recipeOptions,
@@ -17,6 +18,7 @@ import { Button } from '../ui';
 const GLYPH = { 1: '✗', 2: '✓', 3: '✓✓' } as const;
 
 export function Recipe() {
+  const navigate = useNavigate();
   const id = Number(useParams().id);
   const session = authClient.useSession();
   const queryClient = useQueryClient();
@@ -51,6 +53,18 @@ export function Recipe() {
     onSuccess: refresh,
   });
 
+  const remove = useMutation({
+    mutationFn: () => deleteRecipe(id),
+    onSuccess: async () => {
+      queryClient.removeQueries({ queryKey: recipeKeys.detail(id) });
+      await queryClient.invalidateQueries({
+        queryKey: recipeKeys.all,
+        refetchType: 'none',
+      });
+      await navigate('/');
+    },
+  });
+
   if (!Number.isInteger(id) || id < 1) {
     return <State>That recipe does not exist.</State>;
   }
@@ -64,12 +78,69 @@ export function Recipe() {
     return <State>Reading the source…</State>;
   }
   if (recipe.data.status === 'failed') {
+    const noRecipe = recipe.data.failureReason === 'no_recipe';
     return (
       <State>
-        <p>Extraction failed. The source is safe.</p>
-        <Button disabled={retry.isPending} onClick={() => retry.mutate()}>
-          {retry.isPending ? 'Retrying…' : 'Try again'}
-        </Button>
+        <h1 className="type-title text-ink font-bold">
+          {noRecipe ? 'No recipe found' : 'We couldn’t read this recipe'}
+        </h1>
+        <p className="mx-auto max-w-sm">
+          {noRecipe
+            ? 'Try a clear photo of a recipe page showing the ingredients or method. A photo of a dish on its own isn’t enough.'
+            : 'Something went wrong while reading the source. It’s saved, so you can try again.'}
+        </p>
+        <div className="flex flex-wrap justify-center gap-3">
+          {recipe.data.sources.map(source =>
+            source.kind === 'photo' ? (
+              <a key={source.id} href={`/api/photos/${source.id}`}>
+                <img
+                  src={`/api/photos/${source.id}`}
+                  alt="Uploaded source"
+                  className="rounded-ui border-line h-40 w-40 border object-contain"
+                />
+              </a>
+            ) : (
+              <a
+                key={source.id}
+                href={source.url ?? '#'}
+                className="text-accent underline"
+              >
+                View original webpage
+              </a>
+            ),
+          )}
+        </div>
+        <div className="flex flex-wrap items-center justify-center gap-3">
+          <Link
+            to="/capture"
+            className="rounded-pill bg-accent text-accent-ink inline-flex min-h-11 items-center px-4 font-semibold"
+          >
+            Try another source
+          </Link>
+          <button
+            type="button"
+            disabled={retry.isPending || remove.isPending}
+            onClick={() => retry.mutate()}
+            className="text-accent min-h-11 px-3 underline disabled:opacity-50"
+          >
+            {retry.isPending ? 'Retrying…' : 'Try reading again'}
+          </button>
+          {recipe.data.createdByUserId === session.data?.user.id && (
+            <button
+              type="button"
+              disabled={remove.isPending || retry.isPending}
+              onClick={() => remove.mutate()}
+              className="text-danger min-h-11 px-3 underline disabled:opacity-50"
+            >
+              {remove.isPending ? 'Removing…' : 'Remove upload'}
+            </button>
+          )}
+        </div>
+        {(retry.error || remove.error) && (
+          <p role="alert" className="text-danger">
+            {retry.error?.message ?? remove.error?.message}
+          </p>
+        )}
       </State>
     );
   }
