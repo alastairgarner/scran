@@ -105,8 +105,10 @@
   padding-bottom: 8rem;
 }
 
-/* Keep the document still while the catalogue's results scroll. The visual
-   viewport variables also cover browsers where the keyboard overlays dvh. */
+/* The viewport meta opts Chromium into resizing the layout for the keyboard,
+   so dvh and fixed positioning share the browser's native viewport geometry.
+   This also avoids Brave's hidden-toolbar gap (brave/brave-browser#60074).
+   The variables are only a fallback for browsers ignoring interactive-widget. */
 @media (width < 48rem) {
   body:has(.catalogue-shell) {
     overflow: hidden;

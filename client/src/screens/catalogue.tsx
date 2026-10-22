@@ -1,10 +1,10 @@
 import { TAGS, type TagId } from '@scran/shared';
 import { useQuery } from '@tanstack/react-query';
-import { useLayoutEffect, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router';
 
 import { listRecipes, type RecipeSummary, recipeKeys } from '../api/recipes';
 import { authClient } from '../auth';
+import { useCatalogueViewport } from '../catalogue-viewport';
 import { aggregate, matchesSpeed, type Speed } from '../recipe-logic';
 import { Modal } from '../ui';
 
@@ -24,29 +24,7 @@ const SPEED_LABEL: Record<Speed, string> = {
 };
 
 export function Catalogue() {
-  const viewportRef = useRef<HTMLElement>(null);
-
-  useLayoutEffect(() => {
-    const viewport = window.visualViewport;
-    const element = viewportRef.current;
-    if (!viewport || !element) {
-      return;
-    }
-    // Mobile keyboards resize/pan the visual viewport, not necessarily the
-    // layout viewport used by position:fixed and dvh (Android and iOS).
-    const sync = () => {
-      element.style.setProperty('--catalogue-height', `${viewport.height}px`);
-      element.style.setProperty('--catalogue-top', `${viewport.offsetTop}px`);
-    };
-    sync();
-    viewport.addEventListener('resize', sync);
-    viewport.addEventListener('scroll', sync);
-    return () => {
-      viewport.removeEventListener('resize', sync);
-      viewport.removeEventListener('scroll', sync);
-    };
-  }, []);
-
+  const viewportRef = useCatalogueViewport();
   const session = authClient.useSession();
   const [params, setParams] = useSearchParams();
   const query = params.get('q') ?? '';
