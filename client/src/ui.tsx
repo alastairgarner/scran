@@ -76,7 +76,7 @@ export function Modal({
       aria-label={label}
       onClose={onClose}
       onCancel={onClose}
-      className="rounded-t-sheet border-line bg-panel text-ink shadow-card backdrop:bg-ink/40 md:rounded-ui mt-auto mb-0 max-h-[85dvh] w-[min(42rem,100%)] border p-0 md:m-auto"
+      className="rounded-t-sheet border-line bg-panel text-ink shadow-card backdrop:bg-ink/40 modal-safe md:rounded-ui fixed inset-x-0 top-auto bottom-0 m-0 max-h-[85dvh] w-full max-w-none overflow-y-auto border p-0 md:inset-0 md:m-auto md:max-w-2xl"
     >
       {children}
     </dialog>

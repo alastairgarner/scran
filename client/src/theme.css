@@ -93,6 +93,10 @@
   padding-bottom: max(1.5rem, env(safe-area-inset-bottom));
 }
 
+@utility modal-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
 @utility bottom-clearance {
   padding-bottom: 10rem;
 }
