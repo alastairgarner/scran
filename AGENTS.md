@@ -12,6 +12,12 @@ if they fail. `bun install` wires it up.
 
 Issues and specs live as Markdown under `tasks/<feature>/`. See `docs/agents/issue-tracker.md`.
 
+For parallel work, UI previews, and deployment after merging, follow
+[docs/development-workflow.md](docs/development-workflow.md). Use `bun run preview:up`
+for an isolated seeded UI; deploy merged `origin/main` with `bun run deploy`.
+Develop and test in parallel, but coordinate one agent at a time to merge locally,
+validate the combined result, push main, and deploy.
+
 ## Agent skills
 
 ### Issue tracker

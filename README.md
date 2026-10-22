@@ -32,6 +32,11 @@ After choosing a photo, check the preview and rotate it until the text is uprigh
 then select **Extract recipe**. The original photo is kept unchanged; extraction
 and retries use a copy with camera orientation and your selected rotation applied.
 
+## Parallel development
+
+See [the development workflow](docs/development-workflow.md) for isolated worktree
+previews, seeded test accounts, validation, and explicit deployment after merging.
+
 ## Layout
 
 - `server/` — Hono API

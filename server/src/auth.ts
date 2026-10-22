@@ -43,6 +43,7 @@ export const auth = betterAuth({
     freshAge: 0,
   },
   advanced: {
+    cookiePrefix: config.authCookiePrefix,
     // `Secure` cookies need a secure context, which `http://192.168.x.x` is
     // not. One env var, flipped at deploy time, no code change.
     useSecureCookies: config.cookieSecure,

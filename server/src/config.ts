@@ -26,6 +26,10 @@ const envSchema = z.object({
   // Signs the session cookie. A leaked database replays as 401 without it, so
   // it is the one secret that must not be backed up beside `scran.db`.
   AUTH_SECRET: z.string().min(32),
+  AUTH_COOKIE_PREFIX: z
+    .string()
+    .regex(/^[a-zA-Z0-9_-]+$/)
+    .default('better-auth'),
   // Off on the LAN, on behind TLS. The whole TLS story that is in scope.
   COOKIE_SECURE: z.stringbool().default(false),
 });
@@ -56,6 +60,7 @@ export function parseConfig(env: Record<string, string | undefined>) {
     port: parsed.data.PORT,
     baseUrl: parsed.data.BASE_URL,
     authSecret: parsed.data.AUTH_SECRET,
+    authCookiePrefix: parsed.data.AUTH_COOKIE_PREFIX,
     cookieSecure: parsed.data.COOKIE_SECURE,
   };
 }

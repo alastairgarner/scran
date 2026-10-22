@@ -39,6 +39,7 @@ describe('parseConfig', () => {
       port: 3000,
       baseUrl: 'http://localhost:5173',
       cookieSecure: false,
+      authCookiePrefix: 'better-auth',
     });
   });
 
@@ -53,6 +54,17 @@ describe('parseConfig', () => {
     // Assert
     expect(config.port).toBe(8080);
     expect(config.cookieSecure).toBe(true);
+  });
+
+  it('accepts distinct preview cookie prefixes and rejects invalid cookie names', () => {
+    const config = parseConfig({
+      ...required,
+      AUTH_COOKIE_PREFIX: 'scran-preview-123',
+    });
+    expect(config.authCookiePrefix).toBe('scran-preview-123');
+    expect(() =>
+      parseConfig({ ...required, AUTH_COOKIE_PREFIX: 'invalid; cookie' }),
+    ).toThrow(/AUTH_COOKIE_PREFIX/);
   });
 
   it('rejects a log level pino would not understand', () => {
