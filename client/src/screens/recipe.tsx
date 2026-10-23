@@ -119,12 +119,12 @@ export function Recipe() {
             : 'Something went wrong while reading the source. It’s saved, so you can try again.'}
         </p>
         <div className="flex flex-wrap justify-center gap-3">
-          {recipe.data.sources.map(source =>
+          {recipe.data.sources.map((source, index) =>
             source.kind === 'photo' ? (
               <a key={source.id} href={`/api/photos/${source.id}`}>
                 <img
                   src={`/api/photos/${source.id}`}
-                  alt="Uploaded source"
+                  alt={`Source photo ${index + 1}`}
                   className="rounded-ui border-line h-40 w-40 border object-contain"
                 />
               </a>
@@ -254,7 +254,7 @@ export function Recipe() {
           <p>
             {action === 'delete'
               ? `“${version.name}” will be removed from the household’s catalogue.`
-              : 'The saved photo or webpage will be read again. A successful reading replaces the current content, including any edits. Previous versions are kept; if reading fails, this recipe stays as it is.'}
+              : 'All saved photos, in reading order, or the saved webpage will be read again. A successful reading replaces the current content, including any edits. Previous versions are kept; if reading fails, this recipe stays as it is.'}
           </p>
           {(action === 'delete' ? remove.error : readAgain.error) && (
             <Feedback tone="error">
@@ -395,13 +395,13 @@ export function Recipe() {
         {recipe.data.sources.length > 0 && (
           <Section title="Source" reading>
             <div className="flex flex-wrap gap-3">
-              {recipe.data.sources.map(source =>
+              {recipe.data.sources.map((source, index) =>
                 source.kind === 'photo' ? (
                   <a key={source.id} href={`/api/photos/${source.id}`}>
                     <img
                       src={`/api/photos/${source.id}`}
-                      alt="The photographed recipe page"
-                      className="rounded-ui border-line h-28 w-24 border object-cover opacity-70"
+                      alt={`Source photo ${index + 1}`}
+                      className="rounded-ui border-line h-28 w-24 border object-contain opacity-70"
                     />
                   </a>
                 ) : (

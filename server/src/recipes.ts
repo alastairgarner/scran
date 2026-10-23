@@ -20,7 +20,14 @@ import type {
   Section,
   TagId,
 } from '@scran/shared';
-import { normaliseTags, TAGS } from '@scran/shared';
+import {
+  MAX_CAPTURE_BYTES,
+  MAX_CAPTURE_PHOTOS,
+  MAX_PHOTO_BYTES,
+  normaliseTags,
+  photoRotationSchema,
+  TAGS,
+} from '@scran/shared';
 
 import { db } from './db';
 import { AppError, ClientError } from './errors';
@@ -28,13 +35,14 @@ import { extract, NoRecipeFound } from './extraction';
 import type { Complete } from './extraction/openai';
 import { preparePhoto } from './extraction/photo';
 import { logger } from './logger';
-import { readSource, saveSource } from './storage';
+import { readSource, removeSource, saveSource } from './storage';
 
 /** A capture is `pending` until the model answers, then `ready` or `failed`. */
 export type RecipeStatus = 'pending' | 'ready' | 'failed';
 
 type CaptureSource =
   | { kind: 'photo'; data: Blob; rotation?: PhotoRotation }
+  | { kind: 'photos'; photos: { data: Blob; rotation: PhotoRotation }[] }
   | { kind: 'html'; data: Blob; url: string };
 
 /** Long enough that a slow model finishes; short enough to unstick a restart. */
@@ -167,50 +175,107 @@ export function ftsQuery(query: string): string {
 export async function capture(
   userId: string,
   source: CaptureSource,
-): Promise<{
-  id: number;
-  sourceId: number;
-}> {
+  deps: { saveSource: typeof saveSource } = { saveSource },
+): Promise<{ id: number; sourceId: number }> {
+  const sources =
+    source.kind === 'photos'
+      ? source.photos.map(
+          page => ({ kind: 'photo', ...page }) satisfies CaptureSource,
+        )
+      : [source];
+  if (source.kind !== 'html') {
+    if (
+      sources.length === 0 ||
+      sources.length > MAX_CAPTURE_PHOTOS ||
+      sources.some(
+        item =>
+          !item.data.type.startsWith('image/') ||
+          item.data.size === 0 ||
+          item.data.size > MAX_PHOTO_BYTES ||
+          (item.kind === 'photo' &&
+            !photoRotationSchema.safeParse(item.rotation ?? 0).success),
+      ) ||
+      sources.reduce((sum, item) => sum + item.data.size, 0) > MAX_CAPTURE_BYTES
+    ) {
+      throw ClientError.validation(
+        'Send 1–10 photos, each at most 20 MiB and 50 MiB in total, with valid rotations.',
+      );
+    }
+  }
   const at = now();
-  const { id, sourceId } = db.transaction(() => {
+  // IDs are allocated in upload order in one transaction. ORDER BY id is the
+  // permanent reading order, including for legacy sources (no backfill needed).
+  const { id, rows } = db.transaction(() => {
     const recipe = db
       .query(
         `INSERT INTO recipe (status, createdByUserId, createdAt, updatedAt)
-         VALUES ('pending', ?, ?, ?) RETURNING id`,
+       VALUES ('pending', ?, ?, ?) RETURNING id`,
       )
       .get(userId, at, at) as { id: number };
-    const sourceRow = db
-      .query(
-        `INSERT INTO source (recipeId, kind, url, rotation, createdAt, updatedAt)
+    const sourceRows = sources.map(item => {
+      const row = db
+        .query(
+          `INSERT INTO source (recipeId, kind, url, rotation, createdAt, updatedAt)
          VALUES (?, ?, ?, ?, ?, ?) RETURNING id`,
-      )
-      .get(
-        recipe.id,
-        source.kind,
-        source.kind === 'html' ? source.url : null,
-        source.kind === 'photo' ? (source.rotation ?? 0) : 0,
-        at,
-        at,
-      ) as { id: number };
-    return { id: recipe.id, sourceId: sourceRow.id };
+        )
+        .get(
+          recipe.id,
+          item.kind,
+          item.kind === 'html' ? item.url : null,
+          item.kind === 'photo' ? (item.rotation ?? 0) : 0,
+          at,
+          at,
+        ) as { id: number };
+      return { id: row.id, data: item.data };
+    });
+    return { id: recipe.id, rows: sourceRows };
   })();
 
-  // The bytes land after the rows, so the key `storage` returns is written
-  // back rather than guessed at — `storage` keeps its monopoly on paths. A
-  // disk that refuses them fails the recipe on the spot rather than leaving it
-  // pending for the boot sweep to find in ten minutes' time.
+  const keys: string[] = [];
   try {
-    const key = await saveSource(sourceId, source.data);
-    db.run('UPDATE source SET path = ?, updatedAt = ? WHERE id = ?', [
-      key,
-      now(),
-      sourceId,
-    ]);
+    for (const row of rows) {
+      keys.push(await deps.saveSource(row.id, row.data));
+    }
+    db.transaction(() => {
+      for (const [index, key] of keys.entries()) {
+        db.run('UPDATE source SET path = ?, updatedAt = ? WHERE id = ?', [
+          key,
+          now(),
+          rows[index].id,
+        ]);
+      }
+    })();
   } catch (cause) {
-    setStatus(id, 'failed');
-    throw AppError.internal('Could not save that source.', { id }, cause);
+    // A batch is indivisible: never expose a retryable truncated source set.
+    // Await every cleanup even if another cleanup fails.
+    const cleanup = await Promise.allSettled(keys.map(removeSource));
+    db.transaction(() => {
+      // The pending row is visible while bytes are being saved. Remove any
+      // dependants created in that window in the same synchronous transaction,
+      // so a concurrent rating/comment cannot prevent rollback of the batch.
+      db.run('DELETE FROM rating WHERE recipeId = ?', [id]);
+      db.run('DELETE FROM comment WHERE recipeId = ?', [id]);
+      db.run('DELETE FROM recipeTag WHERE recipeId = ?', [id]);
+      db.run('DELETE FROM recipeVersion WHERE recipeId = ?', [id]);
+      db.run('DELETE FROM recipeSearch WHERE rowid = ?', [id]);
+      db.run('DELETE FROM source WHERE recipeId = ?', [id]);
+      db.run('DELETE FROM recipe WHERE id = ?', [id]);
+    })();
+    for (const result of cleanup) {
+      if (result.status === 'rejected') {
+        logger.error(
+          { id, err: result.reason },
+          'Could not clean up unsuccessful capture',
+        );
+      }
+    }
+    throw AppError.internal('Could not save those sources.', { id }, cause);
   }
-  return { id, sourceId };
+  const first = rows[0];
+  if (!first) {
+    throw AppError.invariant('A capture has no sources.', { id });
+  }
+  return { id, sourceId: first.id };
 }
 
 /** Fetches and permanently stores a webpage before extraction starts. */
@@ -440,30 +505,48 @@ export async function runExtraction(
   },
 ): Promise<void> {
   try {
-    const source = db
+    const sources = db
       .query(
         `SELECT id, kind, path, rotation FROM source
-         WHERE recipeId = ? ORDER BY id LIMIT 1`,
+       WHERE recipeId = ? ORDER BY id`,
       )
-      .get(recipeId) as
-      | {
-          id: number;
-          kind: 'photo' | 'html';
-          path: string | null;
-          rotation: PhotoRotation;
-        }
-      | undefined;
-    if (!source?.path) {
-      throw AppError.invariant('A pending recipe has no source.', { recipeId });
+      .all(recipeId) as {
+      id: number;
+      kind: 'photo' | 'html';
+      path: string | null;
+      rotation: PhotoRotation;
+    }[];
+    const first = sources[0];
+    if (!first || sources.some(source => !source.path)) {
+      throw AppError.invariant('A pending recipe has no complete source set.', {
+        recipeId,
+      });
     }
 
-    const file = readSource(source.path);
-    const extracted = await extract(
-      source.kind === 'photo'
-        ? { kind: 'photo', photo: await preparePhoto(file, source.rotation) }
-        : { kind: 'html', html: await file.text() },
-      deps,
-    );
+    let extractionSource: Parameters<typeof extract>[0];
+    if (first.kind === 'html' && sources.length === 1 && first.path) {
+      extractionSource = {
+        kind: 'html',
+        html: await readSource(first.path).text(),
+      };
+    } else {
+      const photos = await Promise.all(
+        sources.map(async source => {
+          if (source.kind !== 'photo' || !source.path) {
+            throw AppError.invariant('A recipe has incompatible sources.', {
+              recipeId,
+            });
+          }
+          return preparePhoto(readSource(source.path), source.rotation);
+        }),
+      );
+      const single = photos[0];
+      extractionSource =
+        photos.length === 1 && single
+          ? { kind: 'photo', photo: single }
+          : { kind: 'photos', photos };
+    }
+    const extracted = await extract(extractionSource, deps);
     db.transaction(() => {
       requireAlive(recipeId);
       addVersion(recipeId, {

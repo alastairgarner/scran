@@ -1,3 +1,4 @@
+import { rm } from 'node:fs/promises';
 import { basename, join } from 'node:path';
 
 import { config } from './config';
@@ -30,8 +31,18 @@ export async function saveSource(
   data: Blob,
 ): Promise<string> {
   const key = `${sourceId}.${EXTENSION_BY_MIME_TYPE[data.type] ?? 'bin'}`;
-  await Bun.write(join(SOURCE_DIR, key), data);
-  return key;
+  try {
+    await Bun.write(join(SOURCE_DIR, key), data);
+    return key;
+  } catch (cause) {
+    await removeSource(key);
+    throw cause;
+  }
+}
+
+/** Removes a source after an unsuccessful capture; never used for saved recipes. */
+export async function removeSource(key: string): Promise<void> {
+  await rm(join(SOURCE_DIR, basename(key)), { force: true });
 }
 
 /**

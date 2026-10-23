@@ -162,7 +162,7 @@ export async function extract(
   source: ExtractionSource,
   deps: { complete: Complete } = { complete },
 ): Promise<Extracted> {
-  const prompt = prompts[source.kind];
+  const prompt = prompts[source.kind === 'photos' ? 'photo' : source.kind];
   const completion = await deps.complete({
     prompt,
     source:

@@ -24,7 +24,10 @@ export type Completion = {
 
 export type CompleteRequest = {
   prompt: string;
-  source: { kind: 'photo'; photo: Blob } | { kind: 'html'; html: string };
+  source:
+    | { kind: 'photo'; photo: Blob }
+    | { kind: 'photos'; photos: Blob[] }
+    | { kind: 'html'; html: string };
 };
 
 export type Complete = (request: CompleteRequest) => Promise<Completion>;
@@ -70,20 +73,25 @@ export const prompts = {
  */
 export const complete: Complete = async request => {
   const content =
-    request.source.kind === 'photo'
-      ? [
+    request.source.kind === 'html'
+      ? `Extract exactly one recipe from this webpage HTML:\n\n${request.source.html}`
+      : [
           {
             type: 'text',
-            text: 'Extract the recipe written in this image, or return recipe: null if there is no readable recipe.',
+            text: 'These images are consecutive pages of ONE recipe in reading order. Read them together and return exactly one combined recipe, not one per image. Return recipe: null if there is no readable recipe.',
           },
-          {
-            type: 'image_url',
-            image_url: {
-              url: `data:${request.source.photo.type || 'image/jpeg'};base64,${Buffer.from(await request.source.photo.arrayBuffer()).toString('base64')}`,
-            },
-          },
-        ]
-      : `Extract exactly one recipe from this webpage HTML:\n\n${request.source.html}`;
+          ...(await Promise.all(
+            (request.source.kind === 'photo'
+              ? [request.source.photo]
+              : request.source.photos
+            ).map(async photo => ({
+              type: 'image_url',
+              image_url: {
+                url: `data:${photo.type || 'image/jpeg'};base64,${Buffer.from(await photo.arrayBuffer()).toString('base64')}`,
+              },
+            })),
+          )),
+        ];
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: {

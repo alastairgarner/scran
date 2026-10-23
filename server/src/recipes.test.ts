@@ -5,6 +5,7 @@ import sharp from 'sharp';
 
 import { db } from './db';
 import {
+  addComment,
   addVersion,
   capture,
   captureUrl,
@@ -13,6 +14,7 @@ import {
   get,
   list,
   photo as photoSource,
+  rate,
   retry,
   reread,
   runExtraction,
@@ -21,7 +23,7 @@ import {
   sweepStalePending,
   versions,
 } from './recipes';
-import { readSource } from './storage';
+import { readSource, saveSource } from './storage';
 import {
   recordedComplete,
   signUpThroughInvite,
@@ -63,6 +65,194 @@ const content = (name: string): RecipeContent => ({
   ],
   instructions: [{ title: null, text: 'Roast them.' }],
   notes: [],
+});
+
+describe('multiple-photo captures', () => {
+  const waitForReading = async (id: number) => {
+    for (let i = 0; i < 100 && get(id).status === 'pending'; i++) {
+      await Bun.sleep(10);
+    }
+    expect(get(id).status).not.toBe('pending');
+  };
+
+  it('reads every rotated page together in order on failure, retry and reread, preserving originals', async () => {
+    const userId = await person();
+    const secondBytes = await sharp(TEST_PHOTO_BYTES).flop().png().toBuffer();
+    const { id } = await capture(userId, {
+      kind: 'photos',
+      photos: [
+        { data: photo(), rotation: 90 },
+        { data: new Blob([secondBytes], { type: 'image/png' }), rotation: 180 },
+      ],
+    });
+    const sources = get(id).sources;
+    expect(sources).toHaveLength(2);
+    expect(sources[0].id).toBeLessThan(sources[1].id);
+    for (const [index, source] of sources.entries()) {
+      expect(Buffer.from(await photoSource(source.id).arrayBuffer())).toEqual(
+        index === 0 ? TEST_PHOTO_BYTES : secondBytes,
+      );
+    }
+    const expected = await Promise.all([
+      sharp(TEST_PHOTO_BYTES).rotate(90).raw().toBuffer(),
+      sharp(secondBytes).rotate(180).raw().toBuffer(),
+    ]);
+    let calls = 0;
+    let fail = true;
+    const recorded = recordedComplete();
+    const complete: typeof recorded = async request => {
+      calls++;
+      expect(request.source.kind).toBe('photos');
+      if (request.source.kind !== 'photos') {
+        throw new Error('Expected the complete ordered photo batch');
+      }
+      expect(request.source.photos).toHaveLength(2);
+      const actual = await Promise.all(
+        request.source.photos.map(async page =>
+          sharp(Buffer.from(await page.arrayBuffer()))
+            .raw()
+            .toBuffer(),
+        ),
+      );
+      expect(actual).toEqual(expected);
+      if (fail) {
+        throw new Error('Temporary upstream failure');
+      }
+      return recorded(request);
+    };
+    await runExtraction(id, { complete });
+    expect(get(id).status).toBe('failed');
+    expect(versions(id)).toHaveLength(0);
+    fail = false;
+    retry(id, { complete });
+    await waitForReading(id);
+    expect(versions(id)).toHaveLength(1);
+    setTags(id, ['main']);
+    fail = true;
+    reread(id, userId, { complete });
+    await waitForReading(id);
+    expect(versions(id)).toHaveLength(1);
+    expect(get(id).version?.versionNo).toBe(1);
+    fail = false;
+    reread(id, userId, { complete });
+    await waitForReading(id);
+    expect(versions(id)).toHaveLength(2);
+    expect(get(id).tags).toEqual(['main']);
+    expect(calls).toBe(4);
+    expect(get(id).sources).toEqual(sources);
+    for (const [index, source] of sources.entries()) {
+      expect(Buffer.from(await photoSource(source.id).arrayBuffer())).toEqual(
+        index === 0 ? TEST_PHOTO_BYTES : secondBytes,
+      );
+    }
+  });
+
+  it('removes all saved bytes and rows when saving a later page fails', async () => {
+    const userId = await person();
+    const before = db.query('SELECT id FROM recipe ORDER BY id').all();
+    const beforeSources = db.query('SELECT id FROM source ORDER BY id').all();
+    let savedKey: string | undefined;
+    let calls = 0;
+    expect(
+      capture(
+        userId,
+        {
+          kind: 'photos',
+          photos: [
+            { data: photo(), rotation: 0 },
+            { data: photo(), rotation: 90 },
+          ],
+        },
+        {
+          saveSource: async (id, data) => {
+            if (++calls === 2) {
+              throw new Error('Disk full');
+            }
+            savedKey = await saveSource(id, data);
+            return savedKey;
+          },
+        },
+      ),
+    ).rejects.toThrow('Could not save those sources');
+    expect(db.query('SELECT id FROM recipe ORDER BY id').all()).toEqual(before);
+    expect(db.query('SELECT id FROM source ORDER BY id').all()).toEqual(
+      beforeSources,
+    );
+    expect(savedKey).toBeDefined();
+    if (savedKey) {
+      expect(await readSource(savedKey).exists()).toBe(false);
+    }
+  });
+
+  it('rolls back a failed batch even when dependants are added while saving', async () => {
+    const userId = await person();
+    const before = db.query('SELECT id FROM recipe ORDER BY id').all();
+    const beforeSources = db.query('SELECT id FROM source ORDER BY id').all();
+    let savedKey: string | undefined;
+    let recipeId: number | undefined;
+    let calls = 0;
+    const result = await capture(
+      userId,
+      {
+        kind: 'photos',
+        photos: [
+          { data: photo(), rotation: 0 },
+          { data: photo(), rotation: 90 },
+        ],
+      },
+      {
+        saveSource: async (sourceId, data) => {
+          if (++calls === 2) {
+            const sourceRow = db
+              .query('SELECT recipeId FROM source WHERE id = ?')
+              .get(sourceId) as { recipeId: number };
+            recipeId = sourceRow.recipeId;
+            // Requests can reach the pending recipe before capture resolves.
+            rate(recipeId, userId, 2);
+            addComment(recipeId, userId, 'Looking forward to this');
+            // Cover all dependent tables, including internal writes.
+            addVersion(recipeId, {
+              userId,
+              content: content('Incomplete batch'),
+            });
+            setTags(recipeId, ['main']);
+            throw new Error('Disk full');
+          }
+          savedKey = await saveSource(sourceId, data);
+          return savedKey;
+        },
+      },
+    ).catch(cause => cause);
+    expect(result).toHaveProperty('message', 'Could not save those sources.');
+    expect(recipeId).toBeDefined();
+    expect(db.query('SELECT id FROM recipe ORDER BY id').all()).toEqual(before);
+    expect(db.query('SELECT id FROM source ORDER BY id').all()).toEqual(
+      beforeSources,
+    );
+    for (const table of ['rating', 'comment', 'recipeVersion', 'recipeTag']) {
+      expect(
+        db
+          .query(`SELECT * FROM ${table} WHERE recipeId = ?`)
+          .all(recipeId ?? -1),
+      ).toEqual([]);
+    }
+    expect(
+      db
+        .query('SELECT rowid FROM recipeSearch WHERE rowid = ?')
+        .all(recipeId ?? -1),
+    ).toEqual([]);
+    expect(savedKey).toBeDefined();
+    if (savedKey) {
+      expect(await readSource(savedKey).exists()).toBe(false);
+    }
+  });
+
+  it('rejects an empty direct batch before creating rows', async () => {
+    const userId = await person();
+    const before = db.query('SELECT id FROM recipe ORDER BY id').all();
+    expect(capture(userId, { kind: 'photos', photos: [] })).rejects.toThrow();
+    expect(db.query('SELECT id FROM recipe ORDER BY id').all()).toEqual(before);
+  });
 });
 
 describe('ftsQuery', () => {

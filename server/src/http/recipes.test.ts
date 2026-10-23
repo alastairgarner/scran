@@ -6,6 +6,7 @@
 import { describe, expect, it } from 'bun:test';
 
 import { config } from '../config';
+import { db } from '../db';
 import { app } from '../index';
 import {
   signUpThroughInvite,
@@ -83,6 +84,153 @@ async function captureRecipe(request: Awaited<ReturnType<typeof asPerson>>) {
 }
 
 describe('the recipe API', () => {
+  it('accepts repeated photos and rotations, serving both original sources in order', async () => {
+    const request = await asPerson();
+    await withoutOpenAI(async () => {
+      const form = new FormData();
+      const originals = [
+        TEST_PHOTO_BYTES,
+        Buffer.concat([TEST_PHOTO_BYTES, Buffer.from('second original')]),
+      ];
+      for (const [index, bytes] of originals.entries()) {
+        form.append(
+          'photos',
+          new File([bytes], 'page.png', { type: 'image/png' }),
+        );
+        form.append('rotations', index === 0 ? '90' : '270');
+      }
+      const response = await request('/api/recipes', {
+        method: 'POST',
+        body: form,
+      });
+      expect(response.status).toBe(202);
+      const { id } = await response.json();
+      let recipe = await (await request(`/api/recipes/${id}`)).json();
+      for (
+        let attempt = 0;
+        attempt < 100 && recipe.status === 'pending';
+        attempt++
+      ) {
+        await Bun.sleep(10);
+        recipe = await (await request(`/api/recipes/${id}`)).json();
+      }
+      expect(recipe.status).toBe('ready');
+      expect(recipe.sources).toHaveLength(2);
+      for (const [index, source] of recipe.sources.entries()) {
+        const served = await request(`/api/photos/${source.id}`);
+        expect(Buffer.from(await served.arrayBuffer())).toEqual(
+          originals[index],
+        );
+      }
+      expect(
+        db
+          .query('SELECT rotation FROM source WHERE recipeId = ? ORDER BY id')
+          .all(id),
+      ).toEqual([{ rotation: 90 }, { rotation: 270 }]);
+    });
+  });
+
+  it('rejects invalid batches without creating any recipe or source rows', async () => {
+    const request = await asPerson();
+    const image = (size = TEST_PHOTO_BYTES.length) =>
+      new File(
+        [
+          size === TEST_PHOTO_BYTES.length
+            ? TEST_PHOTO_BYTES
+            : new Uint8Array(size),
+        ],
+        'page.png',
+        { type: 'image/png' },
+      );
+    const cases: [string, FormDataEntryValue][][] = [
+      [],
+      [
+        ['photos', image()],
+        ['rotations', '45'],
+      ],
+      [['photos', image()]],
+      [['rotations', '0']],
+      [
+        ['photos', image()],
+        ['rotations', '0'],
+        ['rotations', '90'],
+      ],
+      [
+        ['photos', image()],
+        ['rotations', '0'],
+        ['photo', image()],
+      ],
+      [
+        ['photos', image()],
+        ['rotations', '0'],
+        ['rotation', '90'],
+      ],
+      [
+        ['photo', image()],
+        ['photo', image()],
+      ],
+      [
+        ['photos', 'not a file'],
+        ['rotations', '0'],
+      ],
+      [
+        ['photos', image(0)],
+        ['rotations', '0'],
+      ],
+      [
+        ['photos', new File(['text'], 'page.txt', { type: 'text/plain' })],
+        ['rotations', '0'],
+      ],
+      [
+        ['photos', image()],
+        ['rotations', image()],
+      ],
+      [
+        ['photos', image()],
+        ['rotations', ''],
+      ],
+      [
+        ['photos', image(20 * 1024 * 1024 + 1)],
+        ['rotations', '0'],
+      ],
+      Array.from(
+        { length: 11 },
+        () =>
+          [
+            ['photos', image()],
+            ['rotations', '0'],
+          ] satisfies [string, FormDataEntryValue][],
+      ).flat(),
+      Array.from(
+        { length: 3 },
+        () =>
+          [
+            ['photos', image(18 * 1024 * 1024)],
+            ['rotations', '0'],
+          ] satisfies [string, FormDataEntryValue][],
+      ).flat(),
+    ];
+    const before = db.query('SELECT id FROM recipe ORDER BY id').all();
+    const sourcesBefore = db.query('SELECT id FROM source ORDER BY id').all();
+    for (const entries of cases) {
+      const form = new FormData();
+      for (const [key, value] of entries) {
+        form.append(key, value);
+      }
+      const response = await request('/api/recipes', {
+        method: 'POST',
+        body: form,
+      });
+      expect(response.status).toBe(400);
+      expect(db.query('SELECT id FROM recipe ORDER BY id').all()).toEqual(
+        before,
+      );
+      expect(db.query('SELECT id FROM source ORDER BY id').all()).toEqual(
+        sourcesBefore,
+      );
+    }
+  });
+
   it('reads a saved source again as a new version and keeps household tags', async () => {
     const request = await asPerson();
     const { id } = await captureRecipe(request);

@@ -104,10 +104,14 @@ export async function updateRecipeTags(id: number, tags: TagId[]) {
   }
 }
 
-export async function capturePhoto(photo: File, rotation: PhotoRotation = 0) {
+export async function capturePhotos(
+  photos: { file: File; rotation: PhotoRotation }[],
+) {
   const form = new FormData();
-  form.append('photo', photo);
-  form.append('rotation', String(rotation));
+  for (const photo of photos) {
+    form.append('photos', photo.file);
+    form.append('rotations', String(photo.rotation));
+  }
   return capture({ method: 'POST', body: form });
 }
 

@@ -10,6 +10,9 @@
 import { zValidator } from '@hono/zod-validator';
 import {
   commentSchema,
+  MAX_CAPTURE_BYTES,
+  MAX_CAPTURE_PHOTOS,
+  MAX_PHOTO_BYTES,
   photoRotationSchema,
   ratingSchema,
   recipeContentSchema,
@@ -24,12 +27,12 @@ import { ClientError } from '../errors';
 import { previewPhoto } from '../extraction/photo';
 import * as recipes from '../recipes';
 
-/** A phone photograph, not a scan. Generous, and still a bound. */
-const MAX_PHOTO_BYTES = 25 * 1024 * 1024;
-
 function requirePhoto(value: unknown): File {
   if (!(value instanceof File) || !value.type.startsWith('image/')) {
     throw ClientError.validation('Send a photo.');
+  }
+  if (value.size === 0) {
+    throw ClientError.validation('That photo is empty.');
   }
   if (value.size > MAX_PHOTO_BYTES) {
     throw ClientError.validation('That photo is too big.');
@@ -95,22 +98,55 @@ export const recipeRoutes = new Hono<AppEnv>()
       return c.json({ id, status: 'pending' as const }, 202);
     }
 
-    const body = await c.req.parseBody();
-    const photo = requirePhoto(body.photo);
-    const rotation = z.coerce
-      .number()
-      .pipe(photoRotationSchema)
-      .safeParse(body.rotation ?? 0);
-    if (!rotation.success) {
+    const body = await c.req.raw.formData().catch(() => {
+      throw ClientError.validation('Send photos using multipart form data.');
+    });
+    const batch = body.has('photos') || body.has('rotations');
+    if (batch && (body.has('photo') || body.has('rotation'))) {
       throw ClientError.validation(
-        'Choose a rotation of 0, 90, 180 or 270 degrees.',
+        'Send either photos or a legacy photo, not both.',
+      );
+    }
+    const files = body.getAll(batch ? 'photos' : 'photo');
+    const rotations = body.getAll(batch ? 'rotations' : 'rotation');
+    if (
+      files.length === 0 ||
+      files.length > MAX_CAPTURE_PHOTOS ||
+      (!batch && (files.length !== 1 || rotations.length > 1)) ||
+      (batch && rotations.length !== files.length)
+    ) {
+      throw ClientError.validation(
+        'Send 1–10 photos with one rotation per photo.',
+      );
+    }
+    const photos = files.map((file, index) => {
+      const data = requirePhoto(file);
+      const value = rotations[index] ?? '0';
+      const rotation = z
+        .string()
+        .regex(/^(0|90|180|270)$/)
+        .transform(Number)
+        .pipe(photoRotationSchema)
+        .safeParse(value);
+      if (!rotation.success) {
+        throw ClientError.validation(
+          'Choose a rotation of 0, 90, 180 or 270 degrees.',
+        );
+      }
+      return { data, rotation: rotation.data };
+    });
+    if (
+      photos.reduce((sum, photo) => sum + photo.data.size, 0) >
+      MAX_CAPTURE_BYTES
+    ) {
+      throw ClientError.validation(
+        'Those photos exceed the 50 MiB total limit.',
       );
     }
 
     const { id } = await recipes.capture(c.get('user').id, {
-      kind: 'photo',
-      data: photo,
-      rotation: rotation.data,
+      kind: 'photos',
+      photos,
     });
     // Deliberately floating: the row is the progress bar, and a failure lands
     // on it rather than on a request nobody is waiting for any more.

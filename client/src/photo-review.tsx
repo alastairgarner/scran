@@ -1,39 +1,25 @@
 import type { PhotoRotation } from '@scran/shared';
 import { useEffect, useRef, useState } from 'react';
 
-import { previewPhoto } from './api/recipes';
-import { Button, Feedback } from './ui';
+import { Feedback } from './ui';
 
 type Preview =
   | { kind: 'loading' }
   | { kind: 'ready'; image: HTMLImageElement }
   | { kind: 'error'; message: string };
 
-const nextRotation: Record<PhotoRotation, PhotoRotation> = {
-  0: 90,
-  90: 180,
-  180: 270,
-  270: 0,
-};
-
 export function PhotoReview({
   photo,
-  busy,
-  onExtract,
-  onRetake,
+  rotation,
 }: {
-  photo: File;
-  busy: boolean;
-  onExtract: (rotation: PhotoRotation) => void;
-  onRetake: () => void;
+  photo: Blob;
+  rotation: PhotoRotation;
 }) {
-  const [rotation, setRotation] = useState<PhotoRotation>(0);
   const [preview, setPreview] = useState<Preview>({ kind: 'loading' });
   const canvas = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
-    const controller = new AbortController();
-    let url: string | undefined;
+    const url = URL.createObjectURL(photo);
     const image = new Image();
     image.onload = () => setPreview({ kind: 'ready', image });
     image.onerror = () =>
@@ -41,28 +27,9 @@ export function PhotoReview({
         kind: 'error',
         message: 'This photo could not be displayed. Try another photo.',
       });
-    // The server normalizes EXIF before previewing: browsers disagree about
-    // some orientation tags, so the model and preview must use the same pixels.
-    void previewPhoto(photo, controller.signal)
-      .then(blob => {
-        if (!controller.signal.aborted) {
-          url = URL.createObjectURL(blob);
-          image.src = url;
-        }
-      })
-      .catch(cause => {
-        if (!controller.signal.aborted) {
-          setPreview({
-            kind: 'error',
-            message:
-              cause instanceof Error
-                ? cause.message
-                : 'Could not load the photo.',
-          });
-        }
-      });
+    // The supplied preview has already been EXIF-normalized by the server.
+    image.src = url;
     return () => {
-      controller.abort();
       image.onload = null;
       image.onerror = null;
       if (url) {
@@ -100,67 +67,22 @@ export function PhotoReview({
   }, [preview, rotation]);
 
   return (
-    <section className="space-y-4" aria-labelledby="photo-review-title">
-      <div className="space-y-2">
-        <h2 id="photo-review-title" className="type-heading font-semibold">
-          Check your photo
-        </h2>
-        <p id="photo-orientation-help" className="type-control text-ink-muted">
-          Make sure the text is upright. Sideways pages can lead to missing
-          ingredients or incorrect quantities.
-        </p>
-      </div>
-      <div className="rounded-ui border-line bg-panel flex min-h-48 items-center justify-center overflow-hidden border p-2">
-        {preview.kind === 'ready' ? (
-          <canvas
-            ref={canvas}
-            role="img"
-            aria-label="Recipe photo in the orientation used for extraction"
-            aria-describedby="photo-orientation-help"
-            className="max-h-[55dvh] w-full object-contain"
-          />
-        ) : (
-          <Feedback tone={preview.kind === 'error' ? 'error' : 'neutral'}>
-            {preview.kind === 'loading'
-              ? 'Loading your photo…'
-              : preview.message}
-          </Feedback>
-        )}
-      </div>
-      <div className="flex flex-wrap gap-2">
-        <Button
-          type="button"
-          className="flex-1"
-          disabled={busy || preview.kind !== 'ready'}
-          variant="secondary"
-          onClick={() => setRotation(nextRotation[rotation])}
-        >
-          ↻ Rotate 90°
-        </Button>
-        <Button
-          type="button"
-          className="flex-1"
-          disabled={busy}
-          variant="quiet"
-          onClick={onRetake}
-        >
-          Retake photo
-        </Button>
-      </div>
-      <p className="sr-only" role="status">
-        {rotation === 0
-          ? 'Original orientation'
-          : `Rotated ${rotation} degrees clockwise`}
-      </p>
-      <Button
-        type="button"
-        className="w-full"
-        loading={busy}
-        disabled={preview.kind !== 'ready'}
-        onClick={() => onExtract(rotation)}
-      >
-        {busy ? 'Saving…' : 'Extract recipe'}
-      </Button>
-    </section>
+    <div
+      className="rounded-ui bg-panel flex h-[36dvh] max-h-96 min-h-40 items-center justify-center overflow-hidden p-2"
+      aria-busy={preview.kind === 'loading'}
+    >
+      {preview.kind === 'ready' ? (
+        <canvas
+          ref={canvas}
+          role="img"
+          aria-label="Recipe photo in the orientation used for extraction"
+          className="max-h-full max-w-full object-contain"
+        />
+      ) : (
+        <Feedback tone={preview.kind === 'error' ? 'error' : 'neutral'}>
+          {preview.kind === 'loading' ? 'Loading your photo…' : preview.message}
+        </Feedback>
+      )}
+    </div>
   );
 }
