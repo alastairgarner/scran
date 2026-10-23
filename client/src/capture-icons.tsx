@@ -4,11 +4,11 @@ export function CaptureIcon({
   name:
     | 'camera'
     | 'library'
-    | 'rotate'
+    | 'rotate-left'
+    | 'rotate-right'
     | 'replace'
     | 'delete'
-    | 'plus'
-    | 'order';
+    | 'plus';
 }) {
   return (
     <svg
@@ -34,10 +34,15 @@ export function CaptureIcon({
           <path d="m3 17 5-5 4 4 4-6 5 7" />
         </>
       )}
-      {name === 'rotate' && (
-        <>
-          <path d="M4 10a8 8 0 1 1 1 9M4 4v6h6" />
-        </>
+      {(name === 'rotate-left' || name === 'rotate-right') && (
+        <g
+          transform={
+            name === 'rotate-right' ? 'translate(24 0) scale(-1 1)' : undefined
+          }
+        >
+          <path d="M3 3v5h5M3.5 8A9 9 0 1 1 3 15" />
+          <rect x="9" y="9" width="6" height="8" rx="1" />
+        </g>
       )}
       {name === 'replace' && (
         <>
@@ -50,13 +55,6 @@ export function CaptureIcon({
         </>
       )}
       {name === 'plus' && <path d="M12 5v14M5 12h14" />}
-      {name === 'order' && (
-        <>
-          <circle cx="5" cy="12" r="1" />
-          <circle cx="12" cy="12" r="1" />
-          <circle cx="19" cy="12" r="1" />
-        </>
-      )}
     </svg>
   );
 }

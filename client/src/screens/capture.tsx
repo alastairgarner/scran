@@ -23,11 +23,12 @@ import {
 } from '../ui';
 
 type UrlForm = { url: string };
-const nextRotation: Record<PhotoRotation, PhotoRotation> = {
-  0: 90,
-  90: 180,
-  180: 270,
-  270: 0,
+const rotations: Record<
+  'left' | 'right',
+  Record<PhotoRotation, PhotoRotation>
+> = {
+  left: { 0: 270, 90: 0, 180: 90, 270: 180 },
+  right: { 0: 90, 90: 180, 180: 270, 270: 0 },
 };
 
 export function Capture() {
@@ -42,8 +43,6 @@ export function Capture() {
   const [chooser, setChooser] = useState<
     { kind: 'add' } | { kind: 'replace'; id: string } | null
   >(null);
-  const [ordering, setOrdering] = useState(false);
-  const [position, setPosition] = useState(1);
   const cameraInput = useRef<HTMLInputElement>(null);
   const libraryInput = useRef<HTMLInputElement>(null);
   const replacement = useRef<string | null>(null);
@@ -166,15 +165,18 @@ export function Capture() {
     }
   };
 
-  const reorderTo = (target: number) => {
+  const rotatePhoto = (direction: 'left' | 'right') => {
     if (!selected) {
       return;
     }
-    const reordered = photos.filter(photo => photo.id !== selected.id);
-    reordered.splice(target, 0, selected);
-    setPhotos(reordered);
+    const rotation = rotations[direction][selected.rotation];
+    setPhotos(current =>
+      current.map(photo =>
+        photo.id === selected.id ? { ...photo, rotation } : photo,
+      ),
+    );
     setAnnouncement(
-      `Photo moved to position ${target + 1} of ${photos.length}.`,
+      `Photo rotated ${direction} 90 degrees. Now ${rotation} degrees clockwise from the original.`,
     );
   };
 
@@ -236,22 +238,22 @@ export function Capture() {
               <Button
                 variant="quiet"
                 size="compact"
-                aria-label="Rotate photo 90°"
-                title="Rotate photo 90°"
+                aria-label="Rotate photo left 90°"
+                title="Rotate left 90°"
                 disabled={busy}
-                onClick={() => {
-                  const rotation = nextRotation[selected.rotation];
-                  setPhotos(current =>
-                    current.map(photo =>
-                      photo.id === selected.id ? { ...photo, rotation } : photo,
-                    ),
-                  );
-                  setAnnouncement(
-                    `Photo rotated ${rotation} degrees clockwise.`,
-                  );
-                }}
+                onClick={() => rotatePhoto('left')}
               >
-                <CaptureIcon name="rotate" />
+                <CaptureIcon name="rotate-left" />
+              </Button>
+              <Button
+                variant="quiet"
+                size="compact"
+                aria-label="Rotate photo right 90°"
+                title="Rotate right 90°"
+                disabled={busy}
+                onClick={() => rotatePhoto('right')}
+              >
+                <CaptureIcon name="rotate-right" />
               </Button>
               <Button
                 variant="quiet"
@@ -281,21 +283,6 @@ export function Capture() {
               >
                 <CaptureIcon name="delete" />
               </Button>
-              {photos.length > 1 && (
-                <Button
-                  variant="quiet"
-                  size="compact"
-                  aria-label="Change photo order"
-                  title="Change photo order"
-                  disabled={busy}
-                  onClick={() => {
-                    setPosition(selectedIndex + 1);
-                    setOrdering(true);
-                  }}
-                >
-                  <CaptureIcon name="order" />
-                </Button>
-              )}
             </div>
           </div>
           <CapturePhotoStrip
@@ -429,42 +416,6 @@ export function Capture() {
               : 'Choose photos'}
           </Button>
         </div>
-      </Dialog>
-      <Dialog
-        open={ordering}
-        title="Change photo order"
-        onClose={() => setOrdering(false)}
-        footer={
-          <Button
-            variant="secondary"
-            disabled={busy}
-            onClick={() => {
-              reorderTo(position - 1);
-              setOrdering(false);
-            }}
-          >
-            Move photo
-          </Button>
-        }
-      >
-        <label
-          htmlFor="photo-position"
-          className="type-label block font-semibold"
-        >
-          Position for photo {selectedIndex + 1}
-        </label>
-        <select
-          id="photo-position"
-          value={position}
-          onChange={event => setPosition(Number(event.target.value))}
-          className="type-control rounded-ui border-line bg-background min-h-12 w-full border px-3"
-        >
-          {photos.map((photo, index) => (
-            <option key={photo.id} value={index + 1}>
-              {index + 1} of {photos.length}
-            </option>
-          ))}
-        </select>
       </Dialog>
     </main>
   );

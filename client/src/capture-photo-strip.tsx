@@ -8,6 +8,10 @@ import {
   useSensors,
 } from '@dnd-kit/core';
 import {
+  restrictToFirstScrollableAncestor,
+  restrictToHorizontalAxis,
+} from '@dnd-kit/modifiers';
+import {
   SortableContext,
   arrayMove,
   horizontalListSortingStrategy,
@@ -16,7 +20,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import type { PhotoRotation } from '@scran/shared';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { CaptureIcon } from './capture-icons';
 import { Button } from './ui';
@@ -45,6 +49,7 @@ export function CapturePhotoStrip({
   onReorder: (photos: CapturePhoto[]) => void;
   onAdd: () => void;
 }) {
+  const strip = useRef<HTMLOListElement>(null);
   const sensors = useSensors(
     useSensor(MouseSensor, { activationConstraint: holdToDrag }),
     useSensor(TouchSensor, { activationConstraint: holdToDrag }),
@@ -58,10 +63,12 @@ export function CapturePhotoStrip({
     <DndContext
       sensors={sensors}
       collisionDetection={closestCenter}
+      modifiers={[restrictToHorizontalAxis, restrictToFirstScrollableAncestor]}
+      autoScroll={{ canScroll: element => element === strip.current }}
       accessibility={{
         screenReaderInstructions: {
           draggable:
-            'To reorder a photo, press Space, then use the arrow keys. Press Space to drop, or Escape to cancel. You can also use Change photo order in the preview toolbar.',
+            'To reorder a photo, press Space, then use the left and right arrow keys. Press Space to drop, or Escape to cancel.',
         },
         announcements: {
           onDragStart: ({ active }) =>
@@ -88,8 +95,9 @@ export function CapturePhotoStrip({
     >
       <SortableContext items={photos} strategy={horizontalListSortingStrategy}>
         <ol
+          ref={strip}
           aria-label="Photos in reading order"
-          className="flex gap-2 overflow-x-auto px-1 py-2"
+          className="flex gap-2 overflow-x-auto overflow-y-hidden overscroll-x-contain px-1 py-2"
         >
           {photos.map((photo, index) => (
             <SortablePhoto
