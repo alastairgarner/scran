@@ -23,7 +23,13 @@ Accounts are invite-only. With the app running:
 bun run invite you@example.com
 ```
 
-Open the printed URL, create the account, then use its email and password on later sign-ins.
+Send the printed URL privately; it is a single-use bearer credential, not email
+verification. Create the account with a 12+ character password, then use its email
+and password on later sign-ins. Everyone joins the **same shared household**.
+The Account screen provides password changes and device sign-out.
+
+For invite cancellation, account disabling, recovery, limits and public VPS
+requirements, read [the security guide](docs/security.md).
 
 From the catalogue, use **+** to photograph a page or import a recipe URL. The new row appears
 immediately while extraction runs.
@@ -54,6 +60,7 @@ Set `OPENAI_API_KEY` and a random `AUTH_SECRET` (at least 32 characters) in `.en
 then run:
 
 ```sh
+# For an existing root-owned data directory, see docs/security.md first.
 docker compose up -d --build --wait
 docker compose exec scran bun server/src/cli/invite.ts you@example.com
 ```
@@ -67,8 +74,8 @@ must support that sampling setting. On this host, install the Caddy route once:
 sudo sh deploy/install-caddy.sh
 ```
 
-This validates the combined configuration, preserves a backup, and reloads the
-existing Caddy service. It reuses the existing `cloudflare_tls` snippet.
+This installs or updates Scran's route, validates the combined configuration,
+preserves a backup, and reloads the existing Caddy service. It reuses the existing `cloudflare_tls` snippet.
 
 Docker is enabled at boot on the home server; `restart: unless-stopped` brings
 Scran back after restarts unless it was explicitly stopped. Inspect it with

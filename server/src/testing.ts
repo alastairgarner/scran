@@ -97,7 +97,7 @@ export async function signUpThroughInvite(
     body: JSON.stringify({
       name: 'Test Person',
       email,
-      password: 'hunter2222',
+      password: 'hunter22222222',
     }),
   });
   if (!response.ok) {

@@ -1,4 +1,12 @@
 scran.hp.affablegecko.net {
-    import cloudflare_tls
-    reverse_proxy 127.0.0.1:3080
+	import cloudflare_tls
+	request_body {
+		max_size 55MiB
+	}
+	reverse_proxy 127.0.0.1:3080 {
+		# The app trusts only this overwritten single-hop header, never a
+		# user-supplied forwarding chain. Keep the backend loopback-only.
+		header_up X-Real-IP {remote_host}
+		header_up X-Forwarded-For {remote_host}
+	}
 }

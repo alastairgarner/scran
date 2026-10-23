@@ -12,6 +12,10 @@ import { z } from 'zod';
 
 import { config } from '../config';
 import { AppError } from '../errors';
+import {
+  OPENAI_MAX_COMPLETION_TOKENS,
+  OPENAI_TIMEOUT_MS,
+} from '../resource-limits';
 
 /** What a completion cost and who produced it — the version's metadata. */
 export type Completion = {
@@ -93,6 +97,7 @@ export const complete: Complete = async request => {
           )),
         ];
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    signal: AbortSignal.timeout(OPENAI_TIMEOUT_MS),
     method: 'POST',
     headers: {
       authorization: `Bearer ${config.openaiApiKey}`,
@@ -100,6 +105,7 @@ export const complete: Complete = async request => {
     },
     body: JSON.stringify({
       model: config.openaiModel,
+      max_completion_tokens: OPENAI_MAX_COMPLETION_TOKENS,
       // GPT-4.1 at temperature zero is the tested extraction configuration.
       temperature: 0,
       response_format: {
@@ -111,6 +117,8 @@ export const complete: Complete = async request => {
         { role: 'user', content },
       ],
     }),
+  }).catch(cause => {
+    throw AppError.dependency('The recipe reader is unavailable.', {}, cause);
   });
 
   if (!response.ok) {
@@ -122,14 +130,28 @@ export const complete: Complete = async request => {
 
   // Only the fields we read; the model's own JSON stays text until `extract`
   // parses it through zod.
-  type ChatCompletion = {
-    choices: { message: { content: string } }[];
-    usage: { prompt_tokens: number; completion_tokens: number };
-  };
-  const body = (await response.json()) as ChatCompletion;
-  const result = responseSchema.safeParse(
-    JSON.parse(body.choices[0]?.message?.content ?? 'null'),
-  );
+  const chatCompletionSchema = z.object({
+    choices: z
+      .array(z.object({ message: z.object({ content: z.string() }) }))
+      .min(1),
+    usage: z.object({
+      prompt_tokens: z.number().int().nonnegative(),
+      completion_tokens: z.number().int().nonnegative(),
+    }),
+  });
+  let body: z.infer<typeof chatCompletionSchema>;
+  let reply: unknown;
+  try {
+    body = chatCompletionSchema.parse(await response.json());
+    reply = JSON.parse(body.choices[0]?.message.content ?? 'null');
+  } catch (cause) {
+    throw AppError.dependency(
+      'The recipe reader returned an unreadable response.',
+      {},
+      cause,
+    );
+  }
+  const result = responseSchema.safeParse(reply);
   if (!result.success) {
     throw AppError.dependency('The recipe reader returned the wrong shape.');
   }

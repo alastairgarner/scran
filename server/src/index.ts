@@ -3,14 +3,24 @@ import { serveStatic } from 'hono/bun';
 import { csrf } from 'hono/csrf';
 import { requestId } from 'hono/request-id';
 
-import { auth, migrateAuth } from './auth';
+import { activeSession, auth, migrateAuth } from './auth';
 import { config } from './config';
 import { db, migrate } from './db';
 import { ClientError, errorHandler } from './errors';
 import { invites } from './http/invites';
 import { recipeRoutes } from './http/recipes';
+import {
+  accountLoginLimit,
+  identifyRequest,
+  MAX_REQUEST_BYTES,
+  publicRequestLimits,
+  requestBodyLimits,
+  safeRequestPath,
+  securityHeaders,
+} from './http/security';
 import { logger } from './logger';
 import { sweepStalePending, syncTagSearch } from './recipes';
+import { chargeDailyUsage } from './resource-limits';
 
 const applied = migrate(db);
 if (applied.length > 0) {
@@ -35,10 +45,37 @@ if (unstuck > 0) {
 const app = new Hono();
 
 app.use('*', requestId());
-
-// Told its origin explicitly rather than inferring one from `Host`, which a
-// reverse proxy can rewrite. Covers the form-shaped requests CORS cannot.
+app.use('*', securityHeaders);
+// Inspect the configured origin before parsing bodies or charging allowances.
 app.use('*', csrf({ origin: config.baseUrl }));
+app.use('*', publicRequestLimits);
+// Reject anonymous uploads before buffering any multipart bytes. Routes still
+// enforce requireUser and supply the authenticated author to domain operations.
+app.use('/api/*', async (c, next) => {
+  const path = c.req.path;
+  if (
+    path !== '/api/health' &&
+    !path.startsWith('/api/auth/') &&
+    !path.startsWith('/api/invites/')
+  ) {
+    const session = await activeSession(c.req.raw.headers);
+    if (!session) {
+      throw ClientError.unauthorised('Sign in to continue.');
+    }
+    identifyRequest(c.req.raw, session.user.id);
+    if (!['GET', 'HEAD', 'OPTIONS'].includes(c.req.method)) {
+      // Comments/tags/ratings must not be an unlimited SQLite growth path.
+      chargeDailyUsage(db, session.user.id, {
+        kind: 'mutation',
+        user: 1000,
+        global: 10_000,
+      });
+    }
+  }
+  await next();
+});
+app.use('*', requestBodyLimits());
+app.use('*', accountLoginLimit);
 
 app.use('*', async (c, next) => {
   const startedAt = performance.now();
@@ -47,7 +84,7 @@ app.use('*', async (c, next) => {
     {
       requestId: c.get('requestId'),
       method: c.req.method,
-      path: c.req.path,
+      path: safeRequestPath(c.req.path),
       status: c.res.status,
       durationMs: Math.round(performance.now() - startedAt),
     },
@@ -73,7 +110,15 @@ const routes = app.route('/', invites).route('/', recipeRoutes);
 app.get('/assets/*', serveStatic({ root: './client/dist' }));
 app.on(
   'GET',
-  ['/', '/signin', '/invite/:token', '/capture', '/recipes/:id', '/ui'],
+  [
+    '/',
+    '/signin',
+    '/invite/:token',
+    '/capture',
+    '/recipes/:id',
+    '/account',
+    '/ui',
+  ],
   serveStatic({ path: './client/dist/index.html' }),
 );
 
@@ -87,6 +132,7 @@ logger.info({ port: config.port, baseUrl: config.baseUrl }, 'scran listening');
 
 export default {
   port: config.port,
+  maxRequestBodySize: MAX_REQUEST_BYTES,
   fetch: app.fetch,
 };
 

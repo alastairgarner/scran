@@ -4,17 +4,43 @@
 import { z } from 'zod';
 
 /**
+ * The floor for every new password: signup, change and operator reset. Better
+ * Auth is configured with the same number. Signing in checks no length, so
+ * passwords set under the old floor of 8 keep working.
+ */
+export const PASSWORD_MIN_LENGTH = 12;
+
+const newPassword = z
+  .string()
+  .min(PASSWORD_MIN_LENGTH, `At least ${PASSWORD_MIN_LENGTH} characters.`)
+  .max(128, 'Use at most 128 characters.');
+
+/**
  * What redeeming an invite asks for. The server validates the request body
  * against this; the signup form resolves the same schema, so the rules are
- * written once. The password floor is Better Auth's own minimum.
+ * written once.
  */
 export const signUpSchema = z.object({
-  name: z.string().trim().min(1, 'What should we call you?'),
+  name: z.string().trim().min(1, 'What should we call you?').max(100),
   email: z.email(),
-  password: z.string().min(8, 'At least 8 characters.'),
+  password: newPassword,
 });
 
 export type SignUp = z.infer<typeof signUpSchema>;
+
+/** The account screen's password change, sent to Better Auth. */
+export const changePasswordSchema = z
+  .object({
+    currentPassword: z.string().min(1, 'Enter your current password.'),
+    newPassword,
+    confirmPassword: z.string(),
+  })
+  .refine(values => values.newPassword === values.confirmPassword, {
+    message: 'The passwords do not match.',
+    path: ['confirmPassword'],
+  });
+
+export type ChangePassword = z.infer<typeof changePasswordSchema>;
 
 export * from './recipe';
 export * from './photo';

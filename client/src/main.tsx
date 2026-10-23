@@ -3,6 +3,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Route, Routes } from 'react-router';
 
+import { Account } from './screens/account';
 import { Invite, RequireAuth, SignIn } from './screens/auth';
 import { Capture } from './screens/capture';
 import { Catalogue } from './screens/catalogue';
@@ -37,6 +38,14 @@ createRoot(rootEl).render(
             }
           />
           <Route path="/invite/:token" element={<Invite />} />
+          <Route
+            path="/account"
+            element={
+              <Protected>
+                <Account />
+              </Protected>
+            }
+          />
           <Route
             path="/"
             element={

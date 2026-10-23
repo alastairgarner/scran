@@ -1,0 +1,12 @@
+# Replace this hostname, point DNS at the VPS, and set the same HTTPS BASE_URL.
+# This example assumes Caddy is directly internet-facing (no CDN/proxy in front).
+recipes.example.com {
+	request_body {
+		max_size 55MiB
+	}
+	reverse_proxy 127.0.0.1:3080 {
+		header_up X-Real-IP {remote_host}
+		header_up X-Forwarded-For {remote_host}
+	}
+	# Do not enable raw access logs: invite URLs contain bearer credentials.
+}

@@ -19,6 +19,7 @@ import {
   TAG_IDS,
 } from '@scran/shared';
 import { Hono } from 'hono';
+import { HTTPException } from 'hono/http-exception';
 import { z } from 'zod';
 
 import type { AppEnv } from '../auth';
@@ -44,6 +45,7 @@ const urlCaptureSchema = z.object({
   url: z
     .string()
     .trim()
+    .max(4096)
     .url()
     .refine(value => ['http:', 'https:'].includes(new URL(value).protocol)),
 });
@@ -64,7 +66,10 @@ export const recipeRoutes = new Hono<AppEnv>()
     let preview: Blob;
     try {
       preview = await previewPhoto(photo);
-    } catch {
+    } catch (cause) {
+      if (cause instanceof HTTPException) {
+        throw cause;
+      }
       throw ClientError.validation(
         'This photo could not be displayed. Try a JPEG, PNG or WebP photo.',
       );
@@ -93,8 +98,10 @@ export const recipeRoutes = new Hono<AppEnv>()
         throw ClientError.validation('Send a valid HTTP URL.');
       }
 
-      const { id } = await recipes.captureUrl(c.get('user').id, body.data.url);
-      void recipes.runExtraction(id);
+      const { id } = await recipes.startCapture(c.get('user').id, {
+        kind: 'url',
+        url: body.data.url,
+      });
       return c.json({ id, status: 'pending' as const }, 202);
     }
 
@@ -144,13 +151,10 @@ export const recipeRoutes = new Hono<AppEnv>()
       );
     }
 
-    const { id } = await recipes.capture(c.get('user').id, {
+    const { id } = await recipes.startCapture(c.get('user').id, {
       kind: 'photos',
       photos,
     });
-    // Deliberately floating: the row is the progress bar, and a failure lands
-    // on it rather than on a request nobody is waiting for any more.
-    void recipes.runExtraction(id);
     return c.json({ id, status: 'pending' as const }, 202);
   })
 
@@ -180,7 +184,7 @@ export const recipeRoutes = new Hono<AppEnv>()
   /** Only for a capture that produced nothing. */
   .post('/api/recipes/:id/retry', idParam, c => {
     const { id } = c.req.valid('param');
-    recipes.retry(id);
+    recipes.retry(id, undefined, c.get('user').id);
     return c.json({ id, status: 'pending' as const }, 202);
   })
 
@@ -245,7 +249,12 @@ export const recipeRoutes = new Hono<AppEnv>()
    * The photographed page, addressed by source id. The stored path never
    * appears in a URL, so traversal is not a class of bug that exists here.
    */
-  .get('/api/photos/:id', idParam, c => {
-    const file = recipes.photo(c.req.valid('param').id);
-    return c.body(file.stream(), 200, { 'content-type': file.type });
+  .get('/api/photos/:id', idParam, async c => {
+    const file = await recipes.photoPreview(c.req.valid('param').id);
+    return new Response(file, {
+      headers: {
+        'content-type': file.type,
+        'cache-control': 'private, no-store',
+      },
+    });
   });

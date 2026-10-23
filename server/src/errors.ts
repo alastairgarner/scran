@@ -232,7 +232,9 @@ export const errorHandler: ErrorHandler = (err, c) => {
   // carries the right status. Turning a deliberate 403 into a 500 would both
   // lie to the caller and page us about a defence working.
   if (err instanceof HTTPException) {
-    return err.getResponse();
+    // Resource/CSRF refusals need actionable messages in the same JSON shape
+    // as other API errors; never expose unexpected server exception messages.
+    return c.json({ error: err.message || 'Request refused.' }, err.status);
   }
   const level =
     err instanceof AppError ? LOG_LEVEL_BY_SEVERITY[err.severity] : 'error';

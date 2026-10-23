@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'bun:test';
 
 import { Hono } from 'hono';
+import { HTTPException } from 'hono/http-exception';
 import { requestId } from 'hono/request-id';
 
 import { AppError, ClientError, errorHandler } from './errors';
@@ -72,6 +73,20 @@ describe('ClientError', () => {
 });
 
 describe('errorHandler', () => {
+  it('keeps resource refusals actionable and machine-readable', async () => {
+    const response = await respondTo(
+      new HTTPException(429, { message: 'Daily limit reached.' }),
+    );
+    expect(response.status).toBe(429);
+    expect(await response.json()).toEqual({ error: 'Daily limit reached.' });
+  });
+
+  it('gives middleware refusals a non-empty fallback message', async () => {
+    const response = await respondTo(new HTTPException(403));
+    expect(response.status).toBe(403);
+    expect(await response.json()).toEqual({ error: 'Request refused.' });
+  });
+
   it('tells the caller what they got wrong', async () => {
     // Arrange & act
     const res = await respondTo(ClientError.notFound('No such recipe'));

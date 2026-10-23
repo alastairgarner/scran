@@ -8,7 +8,9 @@
  */
 import { createHash, randomBytes } from 'node:crypto';
 
+import { PASSWORD_MIN_LENGTH } from '@scran/shared';
 import { betterAuth } from 'better-auth';
+import { APIError, createAuthMiddleware } from 'better-auth/api';
 import { getMigrations } from 'better-auth/db/migration';
 import type { MiddlewareHandler } from 'hono';
 
@@ -22,6 +24,10 @@ const SESSION_LIFETIME_SECONDS = DAY_IN_SECONDS * 180;
 /** Long enough to survive a weekend of ignored phones, short enough to rot. */
 const INVITE_LIFETIME_MS = DAY_IN_SECONDS * 7 * 1000;
 
+const isDisabled = (userId: string) =>
+  db.query('SELECT 1 FROM disabledAccount WHERE userId = ?').get(userId) !==
+  null;
+
 export const auth = betterAuth({
   database: db,
   baseURL: config.baseUrl,
@@ -31,6 +37,8 @@ export const auth = betterAuth({
     // The only credential this map ships. Passkeys need a hostname, and a LAN
     // IP is not one — they arrive with the public deploy, purely additively.
     enabled: true,
+    // Sign-in checks no length, so passwords set under the old floor still work.
+    minPasswordLength: PASSWORD_MIN_LENGTH,
   },
   session: {
     expiresIn: SESSION_LIFETIME_SECONDS,
@@ -47,6 +55,35 @@ export const auth = betterAuth({
     // `Secure` cookies need a secure context, which `http://192.168.x.x` is
     // not. One env var, flipped at deploy time, no code change.
     useSecureCookies: config.cookieSecure,
+    // Trust one header only, overwritten by the isolated reverse proxy. The
+    // default preserves existing direct-Caddy installs; never expose Bun itself.
+    ipAddress: { ipAddressHeaders: [config.authIpHeader] },
+  },
+  hooks: {
+    // Changing a password signs out every other device, whatever the client
+    // asked for: a leaked password's sessions must not outlive it.
+    before: createAuthMiddleware(async ctx => {
+      if (ctx.path === '/change-password') {
+        // Merged deeply into the request, so the rest of the body survives.
+        return { context: { body: { revokeOtherSessions: true } } };
+      }
+    }),
+  },
+  databaseHooks: {
+    session: {
+      create: {
+        // Every way in — sign-in, signup, a password change's fresh session —
+        // creates a session row, so this one check covers them all. Existing
+        // sessions are deleted by `disableAccount` itself.
+        before: async session => {
+          if (isDisabled(session.userId)) {
+            throw new APIError('FORBIDDEN', {
+              message: 'This account has been disabled.',
+            });
+          }
+        },
+      },
+    },
   },
   rateLimit: {
     // Set explicitly because the documented defaults are wrong: the real
@@ -71,6 +108,23 @@ export type AppEnv = { Variables: { user: User } };
 export async function migrateAuth(): Promise<void> {
   const { runMigrations } = await getMigrations(auth.options);
   await runMigrations();
+  // The CLI disables accounts in another process. Enforce the final check in
+  // SQLite itself, atomically with INSERT, not just in the async auth hook.
+  db.run(`CREATE TRIGGER IF NOT EXISTS rejectDisabledAccountSession
+    BEFORE INSERT ON session
+    WHEN EXISTS (SELECT 1 FROM disabledAccount WHERE userId = NEW.userId)
+    BEGIN
+      SELECT RAISE(ABORT, 'Account disabled');
+    END`);
+}
+
+/**
+ * The request's session, unless its account is disabled. Disabling deletes
+ * every session, so the check is a backstop for a race, not the mechanism.
+ */
+export async function activeSession(headers: Headers) {
+  const session = await auth.api.getSession({ headers });
+  return session && !isDisabled(session.user.id) ? session : null;
 }
 
 /**
@@ -79,7 +133,7 @@ export async function migrateAuth(): Promise<void> {
  * drawing; this is the only thing that decides access.
  */
 export const requireUser: MiddlewareHandler<AppEnv> = async (c, next) => {
-  const session = await auth.api.getSession({ headers: c.req.raw.headers });
+  const session = await activeSession(c.req.raw.headers);
   if (!session) {
     throw ClientError.unauthorised('Sign in to continue.');
   }
@@ -130,7 +184,8 @@ export function readInvite(token: string): { email: string | null } {
   const invite = db
     .query(
       `SELECT email FROM invite
-       WHERE tokenHash = ? AND redeemedAt IS NULL AND expiresAt > ?`,
+       WHERE tokenHash = ? AND redeemedAt IS NULL AND revokedAt IS NULL
+         AND expiresAt > ?`,
     )
     .get(hashToken(token), new Date().toISOString()) as
     | { email: string | null }
@@ -166,7 +221,8 @@ export async function redeemInvite(
   const burned = db
     .query(
       `UPDATE invite SET redeemedAt = ?, updatedAt = ?
-       WHERE tokenHash = ? AND redeemedAt IS NULL AND expiresAt > ?
+       WHERE tokenHash = ? AND redeemedAt IS NULL AND revokedAt IS NULL
+         AND expiresAt > ?
        RETURNING id, email`,
     )
     .get(now, now, hashToken(token), now) as
@@ -184,8 +240,8 @@ export async function redeemInvite(
       burned.id,
     ]);
 
-  // An invite bound to an address is bound to it. Otherwise forwarding the
-  // link would hand the account to whoever opened it first.
+  // Email binding limits the account address, not the person holding the
+  // bearer link. Mailbox ownership is intentionally not verified here.
   if (
     burned.email &&
     burned.email.toLowerCase() !== signUp.email.toLowerCase()
@@ -220,4 +276,117 @@ export async function redeemInvite(
     }
     throw AppError.internal('Could not create the account.', {}, cause);
   }
+}
+
+// Operator controls, run from the CLI by whoever holds the server's database.
+// There is no admin role: shell access to the box is the authority.
+
+type PendingInvite = {
+  id: number;
+  email: string | null;
+  createdAt: string;
+  expiresAt: string;
+};
+
+/** @returns {PendingInvite[]} Invites that could still create an account. */
+export function listInvites(): PendingInvite[] {
+  return db
+    .query<PendingInvite, [string]>(
+      `SELECT id, email, createdAt, expiresAt FROM invite
+       WHERE redeemedAt IS NULL AND revokedAt IS NULL AND expiresAt > ?
+       ORDER BY id`,
+    )
+    .all(new Date().toISOString());
+}
+
+/**
+ * Kills an unused invite. Kept rather than deleted, so the row still says who
+ * was invited and when.
+ *
+ * @returns {boolean} Whether an unused invite with that id existed.
+ */
+export function revokeInvite(id: number): boolean {
+  const now = new Date().toISOString();
+  return (
+    db.run(
+      `UPDATE invite SET revokedAt = ?, updatedAt = ?
+       WHERE id = ? AND redeemedAt IS NULL AND revokedAt IS NULL`,
+      [now, now, id],
+    ).changes > 0
+  );
+}
+
+type Account = {
+  id: string;
+  name: string;
+  email: string;
+  createdAt: string;
+  disabledAt: string | null;
+};
+
+/** @returns {Account[]} Every account, disabled ones included. */
+export function listAccounts(): Account[] {
+  return db
+    .query<Account, []>(
+      `SELECT u.id, u.name, u.email, u.createdAt, d.disabledAt
+       FROM "user" u LEFT JOIN disabledAccount d ON d.userId = u.id
+       ORDER BY u.createdAt`,
+    )
+    .all();
+}
+
+/** @throws {ClientError} 404 when no account has that address. */
+function accountId(email: string): string {
+  const row = db
+    .query<{ id: string }, [string]>('SELECT id FROM "user" WHERE email = ?')
+    .get(email.toLowerCase());
+  if (!row) {
+    throw ClientError.notFound(`No account for ${email}.`);
+  }
+  return row.id;
+}
+
+/**
+ * Locks an account out and signs out every device. The user row stays, so the
+ * recipes and versions they wrote keep their attribution. The flag goes in
+ * first. A SQLite trigger also rejects a racing INSERT from another process.
+ */
+export async function disableAccount(email: string): Promise<void> {
+  const userId = accountId(email);
+  db.run(
+    'INSERT OR IGNORE INTO disabledAccount (userId, disabledAt) VALUES (?, ?)',
+    [userId, new Date().toISOString()],
+  );
+  await (await auth.$context).internalAdapter.deleteUserSessions(userId);
+}
+
+/** Lets a disabled account sign in again. Its old sessions stay gone. */
+export function enableAccount(email: string): void {
+  db.run('DELETE FROM disabledAccount WHERE userId = ?', [accountId(email)]);
+}
+
+/**
+ * Replaces a forgotten password with a random one for the operator to pass
+ * on, and signs out every device. Same user id, so nothing they wrote moves.
+ * Hashed by Better Auth's own hasher, so sign-in verifies it like any other.
+ *
+ * @returns {string} The temporary password — the only time it exists.
+ */
+export async function resetPassword(email: string): Promise<string> {
+  const userId = accountId(email);
+  const context = await auth.$context;
+  const account = (await context.internalAdapter.findAccounts(userId)).find(
+    candidate => candidate.providerId === 'credential',
+  );
+  if (!account) {
+    throw ClientError.notFound(`${email} has no password to reset.`);
+  }
+  // 96 bits, base64url: 16 characters, over the floor and easy to read out.
+  const password = randomBytes(12).toString('base64url');
+  await context.internalAdapter.updatePassword(
+    userId,
+    await context.password.hash(password),
+  );
+  await context.internalAdapter.deleteUserSessions(userId);
+  return password;
 }

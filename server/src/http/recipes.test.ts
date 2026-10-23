@@ -5,6 +5,8 @@
  */
 import { describe, expect, it } from 'bun:test';
 
+import sharp from 'sharp';
+
 import { config } from '../config';
 import { db } from '../db';
 import { app } from '../index';
@@ -84,12 +86,19 @@ async function captureRecipe(request: Awaited<ReturnType<typeof asPerson>>) {
 }
 
 describe('the recipe API', () => {
-  it('accepts repeated photos and rotations, serving both original sources in order', async () => {
+  it('accepts repeated photos and rotations, serving sanitized previews in order', async () => {
     const request = await asPerson();
     await withoutOpenAI(async () => {
       const form = new FormData();
       const originals = [
-        TEST_PHOTO_BYTES,
+        await sharp(TEST_PHOTO_BYTES)
+          .withMetadata()
+          .withExif({
+            IFD0: { Artist: 'private metadata' },
+            IFD3: { GPSLatitudeRef: 'N', GPSLatitude: '51/1 30/1 0/1' },
+          })
+          .png()
+          .toBuffer(),
         Buffer.concat([TEST_PHOTO_BYTES, Buffer.from('second original')]),
       ];
       for (const [index, bytes] of originals.entries()) {
@@ -118,8 +127,11 @@ describe('the recipe API', () => {
       expect(recipe.sources).toHaveLength(2);
       for (const [index, source] of recipe.sources.entries()) {
         const served = await request(`/api/photos/${source.id}`);
-        expect(Buffer.from(await served.arrayBuffer())).toEqual(
-          originals[index],
+        const bytes = Buffer.from(await served.arrayBuffer());
+        expect((await sharp(bytes).metadata()).exif).toBeUndefined();
+        expect(served.headers.get('cache-control')).toContain('no-store');
+        expect(bytes).toEqual(
+          await sharp(originals[index]).autoOrient().png().toBuffer(),
         );
       }
       expect(
@@ -128,6 +140,33 @@ describe('the recipe API', () => {
           .all(id),
       ).toEqual([{ rotation: 90 }, { rotation: 270 }]);
     });
+  });
+
+  it('returns 429 without creating sources when the signed-in user has exhausted extraction allowance', async () => {
+    const { cookie, email } = await signUpThroughInvite();
+    const user = db
+      .query<{ id: string }, [string]>('SELECT id FROM user WHERE email = ?')
+      .get(email);
+    if (!user) {
+      throw new Error('Expected the signed-in user');
+    }
+    db.run(
+      'INSERT INTO resourceUsage (day, scope, kind, count) VALUES (?, ?, ?, ?)',
+      [
+        new Date().toISOString().slice(0, 10),
+        `user:${user.id}`,
+        'extraction',
+        config.maxExtractionsPerUserDay,
+      ],
+    );
+    const before = db.query('SELECT count(*) AS n FROM source').get();
+    const response = await app.request('/api/recipes', {
+      method: 'POST',
+      headers: { cookie, origin: config.baseUrl },
+      body: photo(),
+    });
+    expect(response.status).toBe(429);
+    expect(db.query('SELECT count(*) AS n FROM source').get()).toEqual(before);
   });
 
   it('rejects invalid batches without creating any recipe or source rows', async () => {
@@ -343,7 +382,9 @@ describe('the recipe API', () => {
     // The photo is on disk and served by source id, never by path.
     const served = await request(`/api/photos/${recipe.sources[0].id}`);
     expect(served.status).toBe(200);
-    expect(Buffer.from(await served.arrayBuffer())).toEqual(TEST_PHOTO_BYTES);
+    expect(Buffer.from(await served.arrayBuffer())).toEqual(
+      await sharp(TEST_PHOTO_BYTES).png().toBuffer(),
+    );
   });
 
   it('refuses a private URL before fetching it', async () => {

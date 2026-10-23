@@ -131,6 +131,9 @@ export function Catalogue() {
                 <span className="type-label text-ink-muted">
                   {visible.length} {visible.length === 1 ? 'recipe' : 'recipes'}
                 </span>
+                <ButtonLink to="/account" variant="quiet" size="compact">
+                  Account
+                </ButtonLink>
                 <span className="hidden md:block">
                   <ButtonLink to="/capture">+ Add recipe</ButtonLink>
                 </span>

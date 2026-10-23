@@ -149,16 +149,16 @@ export type Extraction = z.infer<typeof extractionSchema>;
 
 /** A `{title, text}` pair — an instruction step or a note. */
 export const sectionSchema = z.object({
-  title: z.string().nullable(),
-  text: z.string(),
+  title: z.string().max(300).nullable(),
+  text: z.string().max(8000),
 });
 
 /** An ingredient line: the verbatim text, plus ticket 10's scalable parts. */
 export const ingredientSchema = sectionSchema.extend({
   quantity: z.number().nullable(),
-  unit: z.string().nullable(),
-  food: z.string().nullable(),
-  note: z.string().nullable(),
+  unit: z.string().max(300).nullable(),
+  food: z.string().max(1000).nullable(),
+  note: z.string().max(2000).nullable(),
 });
 
 /**
@@ -166,21 +166,30 @@ export const ingredientSchema = sectionSchema.extend({
  * columns, and equally what a person's edit posts. Tags are absent on purpose:
  * they hang off the recipe, not the version (ticket 19).
  */
-export const recipeContentSchema = z.object({
-  name: z.string().trim().min(1, 'A recipe needs a name.'),
-  description: z.string().nullable(),
-  recipeYield: z.string().nullable(),
-  yieldQuantity: z.number().nullable(),
-  yieldUnit: z.string().nullable(),
-  totalTime: z.string().nullable(),
-  prepTime: z.string().nullable(),
-  performTime: z.string().nullable(),
-  totalMinutes: z.number().int().nullable(),
-  timeEstimated: z.boolean().nullable(),
-  ingredients: z.array(ingredientSchema),
-  instructions: z.array(sectionSchema),
-  notes: z.array(sectionSchema),
-});
+export const recipeContentSchema = z
+  .object({
+    name: z.string().trim().min(1, 'A recipe needs a name.').max(300),
+    description: z.string().max(8000).nullable(),
+    recipeYield: z.string().max(300).nullable(),
+    yieldQuantity: z.number().nullable(),
+    yieldUnit: z.string().max(300).nullable(),
+    totalTime: z.string().max(300).nullable(),
+    prepTime: z.string().max(300).nullable(),
+    performTime: z.string().max(300).nullable(),
+    totalMinutes: z.number().int().nullable(),
+    timeEstimated: z.boolean().nullable(),
+    ingredients: z.array(ingredientSchema).max(200),
+    instructions: z.array(sectionSchema).max(200),
+    notes: z.array(sectionSchema).max(100),
+  })
+  .refine(
+    content =>
+      new TextEncoder().encode(JSON.stringify(content)).byteLength <=
+      128 * 1024,
+    {
+      message: 'A recipe must fit within 128 KiB.',
+    },
+  );
 
 /**
  * The household's scale, as ticket 04 stored it: 1 cross, 2 tick, 3 double

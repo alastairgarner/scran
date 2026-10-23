@@ -23,7 +23,7 @@ const signUp = (token: string, body: Record<string, string>) =>
 const person = {
   name: 'Nan',
   email: 'nan@scran.test',
-  password: 'hunter2222',
+  password: 'hunter22222222',
 };
 
 /** @returns {number} How many accounts exist. */
@@ -228,7 +228,7 @@ describe('the way in', () => {
     const response = await app.request('/api/auth/sign-in/email', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ email, password: 'hunter2222' }),
+      body: JSON.stringify({ email, password: 'hunter22222222' }),
     });
 
     // Assert

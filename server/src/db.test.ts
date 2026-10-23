@@ -39,6 +39,8 @@ describe('migrate', () => {
       '002-tags-and-time.sql',
       '003-source-rotation.sql',
       '004-extraction-failure-reason.sql',
+      '005-security-usage.sql',
+      '006-account-security.sql',
     ]);
     expect(tableNames(db)).toEqual(
       expect.arrayContaining([
