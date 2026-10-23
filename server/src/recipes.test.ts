@@ -15,6 +15,7 @@ import {
   list,
   photo as photoSource,
   rate,
+  requestPinned,
   retry,
   reread,
   runExtraction,
@@ -347,6 +348,34 @@ describe('search', () => {
 });
 
 describe('capture', () => {
+  it('identifies HTML requests while connecting only to the pinned address', async () => {
+    const server = Bun.serve({
+      hostname: '127.0.0.1',
+      port: 0,
+      fetch(request) {
+        return Response.json({
+          accept: request.headers.get('accept'),
+          userAgent: request.headers.get('user-agent'),
+          host: request.headers.get('host'),
+        });
+      },
+    });
+    try {
+      const response = await requestPinned(
+        new URL(`http://recipe.invalid:${server.port}/recipe`),
+        { address: '127.0.0.1', family: 4 },
+      );
+      expect(response.status).toBe(200);
+      expect(await response.json()).toEqual({
+        accept: 'text/html',
+        userAgent: 'scran/1.0',
+        host: `recipe.invalid:${server.port}`,
+      });
+    } finally {
+      await server.stop(true);
+    }
+  });
+
   it('stores raw HTML and extracts it through the shared path', async () => {
     // Arrange
     const userId = await person();

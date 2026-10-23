@@ -407,7 +407,8 @@ async function requirePublicUrl(
   return { url, address: addresses[0] };
 }
 
-function requestPinned(
+/** Requests HTML from an already validated, pinned address. */
+export function requestPinned(
   url: URL,
   address: { address: string; family: number },
 ): Promise<Response> {
@@ -418,7 +419,7 @@ function requestPinned(
     const request = (url.protocol === 'https:' ? httpsRequest : httpRequest)(
       url,
       {
-        headers: { accept: 'text/html' },
+        headers: { accept: 'text/html', 'user-agent': 'scran/1.0' },
         lookup: pinnedLookup,
         signal: AbortSignal.timeout(15_000),
       },
