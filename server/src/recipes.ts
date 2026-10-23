@@ -26,15 +26,22 @@ import {
   MAX_PHOTO_BYTES,
   normaliseTags,
   photoRotationSchema,
+  recipeContentSchema,
   TAGS,
 } from '@scran/shared';
+import { HTTPException } from 'hono/http-exception';
 
 import { db } from './db';
 import { AppError, ClientError } from './errors';
 import { extract, NoRecipeFound } from './extraction';
 import type { Complete } from './extraction/openai';
-import { preparePhoto } from './extraction/photo';
+import { preparePhoto, previewPhoto } from './extraction/photo';
 import { logger } from './logger';
+import {
+  beginExtraction,
+  chargeEdit,
+  MAX_RECIPE_VERSIONS,
+} from './resource-limits';
 import { readSource, removeSource, saveSource } from './storage';
 
 /** A capture is `pending` until the model answers, then `ready` or `failed`. */
@@ -63,6 +70,7 @@ for (const [network, prefix, family] of [
   ['172.16.0.0', 12, 'ipv4'],
   ['192.0.0.0', 24, 'ipv4'],
   ['192.0.2.0', 24, 'ipv4'],
+  ['192.88.99.0', 24, 'ipv4'],
   ['192.168.0.0', 16, 'ipv4'],
   ['198.18.0.0', 15, 'ipv4'],
   ['198.51.100.0', 24, 'ipv4'],
@@ -71,11 +79,17 @@ for (const [network, prefix, family] of [
   ['240.0.0.0', 4, 'ipv4'],
   ['::', 128, 'ipv6'],
   ['::1', 128, 'ipv6'],
+  ['::', 96, 'ipv6'],
+  ['64:ff9b::', 96, 'ipv6'],
   ['64:ff9b:1::', 48, 'ipv6'],
   ['100::', 64, 'ipv6'],
+  ['2001::', 23, 'ipv6'],
   ['2001:db8::', 32, 'ipv6'],
+  ['2002::', 16, 'ipv6'],
+  ['3fff::', 20, 'ipv6'],
   ['fc00::', 7, 'ipv6'],
   ['fe80::', 10, 'ipv6'],
+  ['fec0::', 10, 'ipv6'],
   ['ff00::', 8, 'ipv6'],
 ] as const) {
   NON_PUBLIC_IPS.addSubnet(network, prefix, family);
@@ -177,6 +191,19 @@ export async function capture(
   source: CaptureSource,
   deps: { saveSource: typeof saveSource } = { saveSource },
 ): Promise<{ id: number; sourceId: number }> {
+  const release = beginExtraction(userId);
+  try {
+    return await saveCapture(userId, source, deps);
+  } finally {
+    release();
+  }
+}
+
+async function saveCapture(
+  userId: string,
+  source: CaptureSource,
+  deps: { saveSource: typeof saveSource } = { saveSource },
+): Promise<{ id: number; sourceId: number }> {
   const sources =
     source.kind === 'photos'
       ? source.photos.map(
@@ -269,6 +296,9 @@ export async function capture(
         );
       }
     }
+    if (cause instanceof HTTPException) {
+      throw cause;
+    }
     throw AppError.internal('Could not save those sources.', { id }, cause);
   }
   const first = rows[0];
@@ -278,8 +308,42 @@ export async function capture(
   return { id, sourceId: first.id };
 }
 
+/** Production entry point: reserve capacity before fetching or saving sources,
+ * retaining the same slot until background extraction has finished. */
+export async function startCapture(
+  userId: string,
+  source: CaptureSource | { kind: 'url'; url: string },
+  deps?: { complete: Complete },
+): Promise<{ id: number; sourceId: number }> {
+  const release = beginExtraction(userId);
+  try {
+    const result =
+      source.kind === 'url'
+        ? await captureUrlAdmitted(userId, source.url)
+        : await saveCapture(userId, source);
+    launchExtraction(result.id, release, deps);
+    return result;
+  } catch (error) {
+    release();
+    throw error;
+  }
+}
+
 /** Fetches and permanently stores a webpage before extraction starts. */
 export async function captureUrl(
+  userId: string,
+  url: string,
+  deps: UrlDependencies = { request: requestPinned, lookup },
+): Promise<{ id: number; sourceId: number }> {
+  const release = beginExtraction(userId);
+  try {
+    return await captureUrlAdmitted(userId, url, deps);
+  } finally {
+    release();
+  }
+}
+
+async function captureUrlAdmitted(
   userId: string,
   url: string,
   deps: UrlDependencies = { request: requestPinned, lookup },
@@ -303,7 +367,7 @@ export async function captureUrl(
     });
   }
 
-  return capture(userId, {
+  return saveCapture(userId, {
     kind: 'html',
     data: await readHtml(response, url),
     url: finalUrl,
@@ -376,7 +440,8 @@ async function requirePublicUrl(
   if (
     !['http:', 'https:'].includes(url.protocol) ||
     url.username !== '' ||
-    url.password !== ''
+    url.password !== '' ||
+    (url.port !== '' && !['80', '443'].includes(url.port))
   ) {
     throw ClientError.validation('Send a public HTTP URL.');
   }
@@ -398,8 +463,13 @@ async function requirePublicUrl(
 
   if (
     addresses.length === 0 ||
-    addresses.some(({ address, family }) =>
-      NON_PUBLIC_IPS.check(address, family === 4 ? 'ipv4' : 'ipv6'),
+    addresses.some(
+      ({ address, family }) =>
+        isIP(address) !== family ||
+        // Only native global-unicast IPv6; reject mapped/translation ranges
+        // here rather than adding ::ffff/96 to BlockList (which also matches IPv4).
+        (family === 6 && !address.toLowerCase().match(/^[23][0-9a-f]{3}:/)) ||
+        NON_PUBLIC_IPS.check(address, family === 4 ? 'ipv4' : 'ipv6'),
     )
   ) {
     throw ClientError.validation('Send a public HTTP URL.');
@@ -505,6 +575,48 @@ export async function runExtraction(
     kind: 'capture',
   },
 ): Promise<void> {
+  requireVersionCapacity(recipeId);
+  const release = beginExtraction(
+    request.kind === 'reread' ? request.userId : currentCreator(recipeId),
+  );
+  try {
+    await extractAdmitted(recipeId, deps, request);
+  } finally {
+    release();
+  }
+}
+
+function launchExtraction(
+  recipeId: number,
+  release: () => void,
+  deps?: { complete: Complete },
+  request: { kind: 'capture' } | { kind: 'reread'; userId: string } = {
+    kind: 'capture',
+  },
+): void {
+  try {
+    setStatus(recipeId, 'pending');
+    void extractAdmitted(recipeId, deps, request)
+      .catch(error =>
+        logger.error(
+          { recipeId, err: error },
+          'Could not record extraction failure',
+        ),
+      )
+      .finally(release);
+  } catch (error) {
+    release();
+    throw error;
+  }
+}
+
+async function extractAdmitted(
+  recipeId: number,
+  deps?: { complete: Complete },
+  request: { kind: 'capture' } | { kind: 'reread'; userId: string } = {
+    kind: 'capture',
+  },
+): Promise<void> {
   try {
     const sources = db
       .query(
@@ -531,16 +643,17 @@ export async function runExtraction(
         html: await readSource(first.path).text(),
       };
     } else {
-      const photos = await Promise.all(
-        sources.map(async source => {
-          if (source.kind !== 'photo' || !source.path) {
-            throw AppError.invariant('A recipe has incompatible sources.', {
-              recipeId,
-            });
-          }
-          return preparePhoto(readSource(source.path), source.rotation);
-        }),
-      );
+      const photos: Blob[] = [];
+      for (const source of sources) {
+        if (source.kind !== 'photo' || !source.path) {
+          throw AppError.invariant('A recipe has incompatible sources.', {
+            recipeId,
+          });
+        }
+        photos.push(
+          await preparePhoto(readSource(source.path), source.rotation),
+        );
+      }
       const single = photos[0];
       extractionSource =
         photos.length === 1 && single
@@ -614,7 +727,12 @@ export function addVersion(
     tokensOut?: number;
   },
 ): number {
-  const { content } = version;
+  const parsed = recipeContentSchema.safeParse(version.content);
+  if (!parsed.success) {
+    throw ClientError.validation('That recipe exceeds the content limits.');
+  }
+  const content = parsed.data;
+  requireVersionCapacity(recipeId);
   const at = now();
   const next =
     ((
@@ -698,7 +816,24 @@ export function edit(
       { recipeId },
     );
   }
-  return addVersion(recipeId, { userId, content });
+  return db.transaction(() => {
+    chargeEdit(userId);
+    return addVersion(recipeId, { userId, content });
+  })();
+}
+
+function requireVersionCapacity(recipeId: number): void {
+  const row = db
+    .query<{ n: number }, [number]>(
+      'SELECT count(*) AS n FROM recipeVersion WHERE recipeId = ?',
+    )
+    .get(recipeId);
+  if ((row?.n ?? 0) >= MAX_RECIPE_VERSIONS) {
+    throw ClientError.conflict(
+      'This recipe has reached its saved version limit.',
+      { recipeId },
+    );
+  }
 }
 
 /** User-facing tag correction checks the recipe is still available. */
@@ -743,8 +878,9 @@ export function reread(
       recipeId,
     });
   }
-  setStatus(recipeId, 'pending');
-  void runExtraction(recipeId, deps, { kind: 'reread', userId });
+  requireVersionCapacity(recipeId);
+  const release = beginExtraction(userId);
+  launchExtraction(recipeId, release, deps, { kind: 'reread', userId });
 }
 
 /**
@@ -755,8 +891,12 @@ export function reread(
  *   run is still in flight — a second one would append a second version and
  *   write the tags twice.
  */
-export function retry(recipeId: number, deps?: { complete: Complete }): void {
-  requireAlive(recipeId);
+export function retry(
+  recipeId: number,
+  deps?: { complete: Complete },
+  userId?: string,
+): void {
+  const creator = requireAlive(recipeId);
   const existing = db
     .query('SELECT 1 AS ok FROM recipeVersion WHERE recipeId = ? LIMIT 1')
     .get(recipeId);
@@ -769,8 +909,8 @@ export function retry(recipeId: number, deps?: { complete: Complete }): void {
   if (statusOf(recipeId) === 'pending') {
     throw ClientError.conflict('This one is still being read.', { recipeId });
   }
-  setStatus(recipeId, 'pending');
-  void runExtraction(recipeId, deps);
+  const release = beginExtraction(userId ?? creator.createdByUserId);
+  launchExtraction(recipeId, release, deps);
 }
 
 /** @returns {RecipeStatus} Where the capture has got to. */
@@ -1053,4 +1193,9 @@ export function photo(sourceId: number): Bun.BunFile {
     throw ClientError.notFound('No such photo.', { sourceId });
   }
   return readSource(source.path);
+}
+
+/** Public photo representation: never return EXIF/GPS or the private original. */
+export async function photoPreview(sourceId: number): Promise<Blob> {
+  return previewPhoto(photo(sourceId));
 }

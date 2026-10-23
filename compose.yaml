@@ -3,17 +3,35 @@ services:
     build: .
     image: ${SCRAN_IMAGE:-scran-scran}
     restart: unless-stopped
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+    mem_limit: 2g
+    cpus: 2
+    pids_limit: 128
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '3'
     ports:
       - '127.0.0.1:3080:3000'
     environment:
       OPENAI_API_KEY: ${OPENAI_API_KEY:?Set OPENAI_API_KEY in .env}
       AUTH_SECRET: ${AUTH_SECRET:?Set AUTH_SECRET in .env}
-      BASE_URL: https://scran.hp.affablegecko.net
+      AUTH_IP_HEADER: ${AUTH_IP_HEADER:-x-forwarded-for}
+      BASE_URL: ${BASE_URL:-https://scran.hp.affablegecko.net}
       COOKIE_SECURE: 'true'
       PORT: '3000'
       DATA_DIR: /data
       DATABASE_URL: /data/scran.db
       OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4.1}
+      MAX_EXTRACTIONS_PER_USER_DAY: ${MAX_EXTRACTIONS_PER_USER_DAY:-60}
+      MAX_EXTRACTIONS_PER_DAY: ${MAX_EXTRACTIONS_PER_DAY:-200}
+      MAX_STORED_SOURCE_BYTES: ${MAX_STORED_SOURCE_BYTES:-5368709120}
+      MAX_CONCURRENT_EXTRACTIONS: ${MAX_CONCURRENT_EXTRACTIONS:-2}
     volumes:
       # Mount the directory, including SQLite's WAL/SHM sidecars and sources.
       - ${SCRAN_DATA_DIR:-./data}:/data:Z

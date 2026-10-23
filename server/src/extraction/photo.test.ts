@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'bun:test';
+import { randomFillSync } from 'node:crypto';
 
 import type { PhotoRotation } from '@scran/shared';
 import sharp from 'sharp';
 
+import { MAX_MODEL_PHOTO_BYTES } from '../resource-limits';
 import { preparePhoto, previewPhoto } from './photo';
 
 // Six distinct pixels, arranged as rows [1,2], [3,4], [5,6]. No text/OCR
@@ -78,7 +80,7 @@ describe('photo orientation', () => {
     );
   });
 
-  it('reduces previews while retaining the full resolution for extraction', async () => {
+  it('bounds previews and model images while retaining the original', async () => {
     const original = new Blob([
       await sharp({
         create: {
@@ -98,7 +100,11 @@ describe('photo orientation', () => {
       Buffer.from(await (await preparePhoto(original, 0)).arrayBuffer()),
     ).metadata();
     expect([preview.width, preview.height]).toEqual([1200, 800]);
-    expect([extraction.width, extraction.height]).toEqual([2400, 1600]);
+    expect([extraction.width, extraction.height]).toEqual([2048, 1365]);
+    const retained = await sharp(
+      Buffer.from(await original.arrayBuffer()),
+    ).metadata();
+    expect([retained.width, retained.height]).toEqual([2400, 1600]);
   });
 
   it('refuses an undecodable image before it can reach the model', async () => {
@@ -106,5 +112,41 @@ describe('photo orientation', () => {
       cause => cause,
     );
     expect(error).toBeInstanceOf(Error);
+  });
+
+  it('caps the encoded size of noisy model images', async () => {
+    const original = await sharp(
+      randomFillSync(Buffer.alloc(2048 * 2048 * 3)),
+      {
+        raw: { width: 2048, height: 2048, channels: 3 },
+      },
+    )
+      .png()
+      .toBuffer();
+    expect(original.byteLength).toBeGreaterThan(MAX_MODEL_PHOTO_BYTES);
+    const prepared = await preparePhoto(new Blob([original]), 0);
+    expect(prepared.type).toBe('image/jpeg');
+    expect(prepared.size).toBeLessThanOrEqual(MAX_MODEL_PHOTO_BYTES);
+  });
+
+  it('strips EXIF, GPS and other metadata from served previews', async () => {
+    const original = await image()
+      .withMetadata({ orientation: 6 })
+      .withExif({
+        IFD0: { Artist: 'private photographer' },
+        IFD3: { GPSLatitudeRef: 'N', GPSLatitude: '51/1 30/1 0/1' },
+      })
+      .png()
+      .toBuffer();
+    expect((await sharp(original).metadata()).exif).toBeDefined();
+    const preview = await previewPhoto(new Blob([original]));
+    const metadata = await sharp(
+      Buffer.from(await preview.arrayBuffer()),
+    ).metadata();
+    expect(metadata.exif).toBeUndefined();
+    expect(metadata.xmp).toBeUndefined();
+    expect(metadata.iptc).toBeUndefined();
+    expect(metadata.orientation).toBeUndefined();
+    expect((await sharp(original).metadata()).exif).toBeDefined();
   });
 });

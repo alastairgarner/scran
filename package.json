@@ -9,6 +9,7 @@
   "scripts": {
     "dev": "bun run --filter '*' --parallel dev",
     "invite": "bun --env-file=.env server/src/cli/invite.ts",
+    "accounts": "bun --env-file=.env server/src/cli/accounts.ts",
     "test": "bun test",
     "check": "oxlint . && oxfmt --check . && bun scripts/check-theme.ts && bun run --filter '*' typecheck",
     "fix": "oxlint --fix . && oxfmt .",

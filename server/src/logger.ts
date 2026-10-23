@@ -11,6 +11,18 @@ import { config } from './config';
  */
 export const logger = pino({
   level: config.logLevel,
+  // Import URLs may carry private query strings; upstream bodies may echo input.
+  redact: {
+    paths: [
+      'url',
+      'location',
+      'body',
+      'err.context.url',
+      'err.context.location',
+      'err.context.body',
+    ],
+    censor: '[redacted]',
+  },
   // A TTY is a human reading along; anything else is a log collector wanting
   // JSON. Cheaper and more honest than a NODE_ENV nobody sets.
   ...(process.stdout.isTTY ? { transport: { target: 'pino-pretty' } } : {}),

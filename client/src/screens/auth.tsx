@@ -1,5 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { type SignUp, signUpSchema } from '@scran/shared';
+import { PASSWORD_MIN_LENGTH, type SignUp, signUpSchema } from '@scran/shared';
+import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Navigate, useNavigate, useParams } from 'react-router';
@@ -24,6 +25,7 @@ export function RequireAuth({ children }: { children: React.ReactNode }) {
 
 export function SignIn() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const session = authClient.useSession();
   const [error, setError] = useState('');
   const form = useForm<SignInValues>();
@@ -39,6 +41,8 @@ export function SignIn() {
       setError(result.error.message ?? 'Could not sign in.');
       return;
     }
+    // A session that died without a sign-out may have left another person's data.
+    queryClient.clear();
     await session.refetch();
     void navigate('/');
   });
@@ -76,6 +80,7 @@ export function SignIn() {
 export function Invite() {
   const { token = '' } = useParams();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const session = authClient.useSession();
   const [loading, setLoading] = useState(true);
   const [dead, setDead] = useState(false);
@@ -128,6 +133,7 @@ export function Invite() {
         setError(await errorMessage(response));
         return;
       }
+      queryClient.clear();
       await session.refetch();
       void navigate('/');
     } catch (cause) {
@@ -171,6 +177,7 @@ export function Invite() {
           label="Password"
           type="password"
           autoComplete="new-password"
+          hint={`At least ${PASSWORD_MIN_LENGTH} characters.`}
           error={form.formState.errors.password?.message}
           {...form.register('password')}
         />

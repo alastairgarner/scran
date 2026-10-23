@@ -10,6 +10,7 @@ import type { RecipeContent, TagId } from '@scran/shared';
 import {
   extractionSchema,
   normaliseTags,
+  recipeContentSchema,
   toRecipeContent,
 } from '@scran/shared';
 
@@ -202,8 +203,15 @@ export async function extract(
     throw new NoRecipeFound();
   }
 
+  const content = recipeContentSchema.safeParse(toRecipeContent(result.data));
+  if (!content.success) {
+    throw AppError.dependency(
+      'The recipe reader returned content exceeding the recipe limits.',
+    );
+  }
+
   return {
-    content: toRecipeContent(result.data),
+    content: content.data,
     // Enforced twice on purpose — stated in the prompt, applied here. A model
     // that forgets `vegan` implies `vegetarian` once costs a wrong filter
     // result forever.

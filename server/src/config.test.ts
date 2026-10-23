@@ -67,6 +67,66 @@ describe('parseConfig', () => {
     ).toThrow(/AUTH_COOKIE_PREFIX/);
   });
 
+  it('rejects unsafe origins and insecure production cookies', () => {
+    for (const BASE_URL of [
+      'https://recipes.example.com/',
+      'https://recipes.example.com/path',
+      'ftp://recipes.example.com',
+      'https://user:pass@recipes.example.com',
+    ]) {
+      expect(() =>
+        parseConfig({ ...required, BASE_URL, COOKIE_SECURE: 'true' }),
+      ).toThrow(/BASE_URL/);
+    }
+    expect(() =>
+      parseConfig({ ...required, BASE_URL: 'https://recipes.example.com' }),
+    ).toThrow(/COOKIE_SECURE/);
+    expect(() => parseConfig({ ...required, NODE_ENV: 'production' })).toThrow(
+      /HTTPS/,
+    );
+    expect(() =>
+      parseConfig({
+        ...required,
+        NODE_ENV: 'production',
+        ALLOW_INSECURE_HTTP: 'true',
+        BASE_URL: 'http://192.168.1.1',
+      }),
+    ).toThrow(/HTTPS/);
+    expect(
+      parseConfig({
+        ...required,
+        NODE_ENV: 'production',
+        ALLOW_INSECURE_HTTP: 'true',
+        BASE_URL: 'http://127.0.0.1:8080',
+      }).baseUrl,
+    ).toBe('http://127.0.0.1:8080');
+    expect(
+      parseConfig({
+        ...required,
+        NODE_ENV: 'production',
+        BASE_URL: 'https://recipes.example.com',
+        COOKIE_SECURE: 'true',
+      }).cookieSecure,
+    ).toBe(true);
+  });
+
+  it('validates configurable resource budgets', () => {
+    expect(parseConfig(required)).toMatchObject({
+      maxExtractionsPerUserDay: 60,
+      maxExtractionsPerDay: 200,
+      maxStoredSourceBytes: 5 * 1024 ** 3,
+      maxConcurrentExtractions: 2,
+    });
+    for (const name of [
+      'MAX_EXTRACTIONS_PER_USER_DAY',
+      'MAX_EXTRACTIONS_PER_DAY',
+      'MAX_STORED_SOURCE_BYTES',
+      'MAX_CONCURRENT_EXTRACTIONS',
+    ]) {
+      expect(() => parseConfig({ ...required, [name]: '0' })).toThrow(name);
+    }
+  });
+
   it('rejects a log level pino would not understand', () => {
     // Arrange & act
     const parse = () => parseConfig({ ...required, LOG_LEVEL: 'chatty' });

@@ -14,6 +14,19 @@ const REPO_ROOT = join(import.meta.dir, '..', '..');
  * request that needed it.
  */
 const envSchema = z.object({
+  NODE_ENV: z
+    .enum(['development', 'production', 'test'])
+    .default('development'),
+  // Only isolated loopback previews may opt out of production HTTPS.
+  ALLOW_INSECURE_HTTP: z.stringbool().default(false),
+  MAX_EXTRACTIONS_PER_USER_DAY: z.coerce.number().int().positive().default(60),
+  MAX_EXTRACTIONS_PER_DAY: z.coerce.number().int().positive().default(200),
+  MAX_STORED_SOURCE_BYTES: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(5 * 1024 ** 3),
+  MAX_CONCURRENT_EXTRACTIONS: z.coerce.number().int().min(1).max(4).default(2),
   DATA_DIR: z.string().default(join(REPO_ROOT, 'data')),
   DATABASE_URL: z.string().default(join(REPO_ROOT, 'data', 'scran.db')),
   OPENAI_API_KEY: z.string().min(1),
@@ -26,6 +39,11 @@ const envSchema = z.object({
   // Signs the session cookie. A leaked database replays as 401 without it, so
   // it is the one secret that must not be backed up beside `scran.db`.
   AUTH_SECRET: z.string().min(32),
+  // Existing direct Caddy installs overwrite X-Forwarded-For. Switch only after
+  // the proxy has been configured to overwrite the chosen single-IP header.
+  AUTH_IP_HEADER: z
+    .enum(['x-forwarded-for', 'x-real-ip'])
+    .default('x-forwarded-for'),
   AUTH_COOKIE_PREFIX: z
     .string()
     .regex(/^[a-zA-Z0-9_-]+$/)
@@ -51,7 +69,36 @@ export function parseConfig(env: Record<string, string | undefined>) {
     throw new Error(`Unusable environment: ${problems}`);
   }
 
+  const origin = new URL(parsed.data.BASE_URL);
+  if (
+    !['http:', 'https:'].includes(origin.protocol) ||
+    parsed.data.BASE_URL !== origin.origin
+  ) {
+    throw new Error(
+      'BASE_URL must be an HTTP(S) origin, without credentials, path or trailing slash.',
+    );
+  }
+  if (origin.protocol === 'https:' && !parsed.data.COOKIE_SECURE) {
+    throw new Error('HTTPS BASE_URL requires COOKIE_SECURE=true.');
+  }
+  const insecurePreview =
+    parsed.data.ALLOW_INSECURE_HTTP &&
+    ['localhost', '127.0.0.1', '[::1]'].includes(origin.hostname);
+  if (
+    parsed.data.NODE_ENV === 'production' &&
+    origin.protocol !== 'https:' &&
+    !insecurePreview
+  ) {
+    throw new Error(
+      'Production requires an HTTPS BASE_URL; only explicit loopback previews may use HTTP.',
+    );
+  }
+
   return {
+    maxExtractionsPerUserDay: parsed.data.MAX_EXTRACTIONS_PER_USER_DAY,
+    maxExtractionsPerDay: parsed.data.MAX_EXTRACTIONS_PER_DAY,
+    maxStoredSourceBytes: parsed.data.MAX_STORED_SOURCE_BYTES,
+    maxConcurrentExtractions: parsed.data.MAX_CONCURRENT_EXTRACTIONS,
     dataDir: parsed.data.DATA_DIR,
     databaseUrl: parsed.data.DATABASE_URL,
     openaiApiKey: parsed.data.OPENAI_API_KEY,
@@ -61,6 +108,7 @@ export function parseConfig(env: Record<string, string | undefined>) {
     baseUrl: parsed.data.BASE_URL,
     authSecret: parsed.data.AUTH_SECRET,
     authCookiePrefix: parsed.data.AUTH_COOKIE_PREFIX,
+    authIpHeader: parsed.data.AUTH_IP_HEADER,
     cookieSecure: parsed.data.COOKIE_SECURE,
   };
 }

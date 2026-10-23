@@ -16,9 +16,12 @@ case "${1:-}" in
     # Docker allocates the port before the app starts. Supply the exact origin
     # through a file so auth and CSRF use that port, without a reservation race.
     docker run -d --name "$name" --label scran.preview=true \
+      --read-only --cap-drop ALL --security-opt no-new-privileges \
+      --tmpfs /tmp:size=64m,mode=1777 --memory 2g --cpus 2 --pids-limit 128 \
+      --log-driver json-file --log-opt max-size=10m --log-opt max-file=3 \
       -p 127.0.0.1::3000 -v "$volume:/data" \
       -e DATA_DIR=/data -e DATABASE_URL=/data/scran.db -e PORT=3000 \
-      -e COOKIE_SECURE=false -e AUTH_COOKIE_PREFIX="$name" -e AUTH_SECRET="$(openssl rand -hex 32)" \
+      -e ALLOW_INSECURE_HTTP=true -e COOKIE_SECURE=false -e AUTH_COOKIE_PREFIX="$name" -e AUTH_SECRET="$(openssl rand -hex 32)" \
       -e OPENAI_API_KEY="${PREVIEW_OPENAI_API_KEY:-preview-no-live-extraction}" \
       "$name:latest" sh -c '
         for i in $(seq 1 60); do

@@ -3,12 +3,14 @@ import { describe, expect, it } from 'bun:test';
 import type { RecipeContent } from '@scran/shared';
 import sharp from 'sharp';
 
+import { config } from './config';
 import { db } from './db';
 import {
   addComment,
   addVersion,
   capture,
   captureUrl,
+  startCapture,
   edit,
   ftsQuery,
   get,
@@ -24,6 +26,7 @@ import {
   sweepStalePending,
   versions,
 } from './recipes';
+import { beginExtraction, MAX_RECIPE_VERSIONS } from './resource-limits';
 import { readSource, saveSource } from './storage';
 import {
   recordedComplete,
@@ -66,6 +69,191 @@ const content = (name: string): RecipeContent => ({
   ],
   instructions: [{ title: null, text: 'Roast them.' }],
   notes: [],
+});
+
+describe('extraction resource policy', () => {
+  const exhaustedUser = () => {
+    const userId = `limited-${crypto.randomUUID()}`;
+    db.run(
+      'INSERT INTO resourceUsage (day, scope, kind, count) VALUES (?, ?, ?, ?)',
+      [
+        new Date().toISOString().slice(0, 10),
+        `user:${userId}`,
+        'extraction',
+        config.maxExtractionsPerUserDay,
+      ],
+    );
+    return userId;
+  };
+
+  it('retains capture admission through background extraction and charges just once', async () => {
+    const userId = `capture-${crypto.randomUUID()}`;
+    let unblock: (() => void) | undefined;
+    const barrier = new Promise<void>(resolve => {
+      unblock = resolve;
+    });
+    const recorded = recordedComplete();
+    const complete: typeof recorded = async request => {
+      await barrier;
+      return recorded(request);
+    };
+    const captures: { id: number }[] = [];
+    try {
+      for (let i = 0; i < config.maxConcurrentExtractions; i++) {
+        captures.push(
+          await startCapture(
+            userId,
+            { kind: 'photo', data: photo() },
+            { complete },
+          ),
+        );
+      }
+      const overflow = await startCapture(
+        'overflow',
+        { kind: 'photo', data: photo() },
+        { complete },
+      ).catch(cause => cause);
+      expect(overflow.status).toBe(503);
+      expect(
+        db
+          .query('SELECT count FROM resourceUsage WHERE scope = ? AND kind = ?')
+          .get(`user:${userId}`, 'extraction'),
+      ).toEqual({ count: config.maxConcurrentExtractions });
+    } finally {
+      unblock?.();
+      for (const { id } of captures) {
+        for (let i = 0; i < 100 && get(id).status === 'pending'; i++) {
+          await Bun.sleep(10);
+        }
+        expect(get(id).status).toBe('ready');
+      }
+    }
+    const release = beginExtraction('released-slot');
+    release();
+  });
+
+  it('keeps failed capture attempts in persisted usage', async () => {
+    const userId = `failed-${crypto.randomUUID()}`;
+    const error = await capture(
+      userId,
+      { kind: 'photo', data: photo() },
+      {
+        saveSource: async () => {
+          throw new Error('Simulated write failure');
+        },
+      },
+    ).catch(cause => cause);
+    expect(error).toBeInstanceOf(Error);
+    expect(
+      db
+        .query('SELECT count FROM resourceUsage WHERE scope = ? AND kind = ?')
+        .get(`user:${userId}`, 'extraction'),
+    ).toEqual({ count: 1 });
+    expect(
+      await capture(userId, { kind: 'photos', photos: [] }).catch(
+        cause => cause,
+      ),
+    ).toBeInstanceOf(Error);
+    expect(
+      db
+        .query('SELECT count FROM resourceUsage WHERE scope = ? AND kind = ?')
+        .get(`user:${userId}`, 'extraction'),
+    ).toEqual({ count: 2 });
+  });
+
+  it('charges before fetching URLs or saving uploaded bytes', async () => {
+    const userId = exhaustedUser();
+    let requests = 0;
+    const error = await captureUrl(userId, 'https://1.1.1.1/recipe', {
+      request: async () => {
+        requests++;
+        throw new Error('Must not fetch');
+      },
+      lookup: async () => {
+        throw new Error('Must not resolve');
+      },
+    }).catch(cause => cause);
+    expect(error.status).toBe(429);
+    expect(requests).toBe(0);
+    let saves = 0;
+    const saved = await capture(
+      userId,
+      { kind: 'photo', data: photo() },
+      {
+        saveSource: async () => {
+          saves++;
+          return 'never';
+        },
+      },
+    ).catch(cause => cause);
+    expect(saved.status).toBe(429);
+    expect(saves).toBe(0);
+  });
+
+  it('rejects admission immediately rather than queuing another capture', async () => {
+    const releases = Array.from(
+      { length: config.maxConcurrentExtractions },
+      () => beginExtraction(`active-${crypto.randomUUID()}`),
+    );
+    try {
+      const before = db.query('SELECT count(*) AS n FROM recipe').get();
+      const error = await startCapture('overflow', {
+        kind: 'photo',
+        data: photo(),
+      }).catch(cause => cause);
+      expect(error.status).toBe(503);
+      expect(db.query('SELECT count(*) AS n FROM recipe').get()).toEqual(
+        before,
+      );
+    } finally {
+      for (const release of releases) {
+        release();
+      }
+    }
+  });
+
+  it('charges retries to the requester before changing state or calling the model', async () => {
+    const { id } = await capture('synthetic-owner', {
+      kind: 'photo',
+      data: photo(),
+    });
+    db.run("UPDATE recipe SET status = 'failed' WHERE id = ?", [id]);
+    let calls = 0;
+    const complete = async () => {
+      calls++;
+      throw new Error('Must not call');
+    };
+    expect(() => retry(id, { complete }, exhaustedUser())).toThrow(
+      'daily limit',
+    );
+    expect(get(id).status).toBe('failed');
+    addVersion(id, { userId: 'synthetic-owner', content: content('Soup') });
+    expect(() => reread(id, exhaustedUser(), { complete })).toThrow(
+      'daily limit',
+    );
+    expect(get(id).status).toBe('ready');
+    expect(calls).toBe(0);
+  });
+
+  it('bounds version history and rejects oversized content at the domain boundary', async () => {
+    const userId = `editor-${crypto.randomUUID()}`;
+    const { id } = await capture(userId, { kind: 'photo', data: photo() });
+    addVersion(id, { userId, content: content('Soup') });
+    expect(() => edit(id, userId, content('x'.repeat(301)))).toThrow(
+      'content limits',
+    );
+    expect(versions(id)).toHaveLength(1);
+    for (let i = 1; i < MAX_RECIPE_VERSIONS; i++) {
+      addVersion(id, { userId, content: content('Soup') });
+    }
+    expect(() => edit(id, userId, content('More soup'))).toThrow(
+      'version limit',
+    );
+    expect(() => reread(id, userId, { complete: recordedComplete() })).toThrow(
+      'version limit',
+    );
+    expect(versions(id)).toHaveLength(MAX_RECIPE_VERSIONS);
+  });
 });
 
 describe('multiple-photo captures', () => {
@@ -480,6 +668,65 @@ describe('capture', () => {
     // Assert
     expect(direct).toMatchObject({ type: 'validation', status: 400 });
     expect(redirected).toMatchObject({ type: 'dependency', status: 503 });
+  });
+
+  it('blocks special IPv6 translation/transition addresses and arbitrary ports, including redirects and DNS', async () => {
+    const userId = 'synthetic-ssrf-user';
+    const forbidden = [
+      'http://[::ffff:127.0.0.1]/',
+      'http://[::127.0.0.1]/',
+      'http://[64:ff9b::7f00:1]/',
+      'http://[64:ff9b:1::7f00:1]/',
+      'http://[2002:7f00:1::]/',
+      'http://[2001::1]/',
+      'http://[2001:20::1]/',
+      'http://[fec0::1]/',
+      'http://[2::1]/',
+      'http://[200::1]/',
+      'http://[5f00::1]/',
+      'http://1.1.1.1:22/',
+      'https://1.1.1.1:8443/',
+    ];
+    let requests = 0;
+    for (const url of forbidden) {
+      const error = await captureUrl(userId, url, {
+        request: async () => {
+          requests++;
+          throw new Error('Must not request');
+        },
+        lookup: async () => [],
+      }).catch(cause => cause);
+      expect(error).toMatchObject({ status: 400, type: 'validation' });
+    }
+    expect(requests).toBe(0);
+    const dns = await captureUrl(userId, 'https://recipe.example/', {
+      request: async () => {
+        throw new Error('Must not request');
+      },
+      lookup: async () => [{ address: '2002:7f00:1::', family: 6 }],
+    }).catch(cause => cause);
+    expect(dns).toMatchObject({ status: 400 });
+    const redirected = await captureUrl(userId, 'https://1.1.1.1/', {
+      request: async () =>
+        new Response(null, {
+          status: 302,
+          headers: { location: 'https://[64:ff9b::7f00:1]/' },
+        }),
+      lookup: async () => [],
+    }).catch(cause => cause);
+    expect(redirected).toMatchObject({ status: 503, type: 'dependency' });
+    const accepted = await captureUrl(
+      userId,
+      'https://[2001:4860:4860::8888]:443/',
+      {
+        request: async () =>
+          new Response('<article>A public recipe</article>', {
+            headers: { 'content-type': 'text/html' },
+          }),
+        lookup: async () => [],
+      },
+    );
+    expect(get(accepted.id).sources).toHaveLength(1);
   });
 
   it('classifies a broken webpage stream as a dependency', async () => {

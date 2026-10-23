@@ -8,14 +8,20 @@ fi
 
 snippet="$(dirname "$0")/scran.caddy"
 config=/etc/caddy/Caddyfile
-if grep -q '^scran\.hp\.affablegecko\.net' "$config"; then
-  echo 'Scran already has a Caddy route; leaving it unchanged.'
-  exit 0
-fi
-
 candidate=$(mktemp /etc/caddy/scran-candidate.XXXXXX)
 trap 'rm -f "$candidate"' EXIT
-cat "$config" > "$candidate"
+# Replace only this managed top-level site; preserve every unrelated route.
+# Refuse an unexpected site declaration rather than appending a duplicate.
+if grep '^scran\.hp\.affablegecko\.net' "$config" | grep -qv '^scran\.hp\.affablegecko\.net {$'; then
+  echo 'Unexpected existing Scran site declaration; update it manually.' >&2
+  exit 1
+fi
+awk '
+  /^scran\.hp\.affablegecko\.net \{$/ { skipping=1; next }
+  skipping && /^\}/ { skipping=0; next }
+  !skipping { print }
+  END { if (skipping) exit 1 }
+' "$config" > "$candidate"
 printf '\n' >> "$candidate"
 cat "$snippet" >> "$candidate"
 /usr/local/bin/caddy fmt --overwrite "$candidate"
@@ -32,4 +38,4 @@ if ! systemctl reload caddy; then
   echo "Reload failed; restored $backup" >&2
   exit 1
 fi
-echo "Scran route installed. Previous config: $backup"
+echo "Scran route installed/updated. Previous config: $backup"

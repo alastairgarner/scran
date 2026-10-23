@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Explicitly deploy committed origin/main; never deploy the caller's worktree.
 set -euo pipefail
+umask 077
 common=$(git rev-parse --path-format=absolute --git-common-dir)
 root=$(dirname "$common")
 state="$root/.scratch/deployment"
@@ -33,6 +34,9 @@ export SCRAN_IMAGE="scran-deploy:$sha"
 export SCRAN_DATA_DIR="$root/data"
 compose() { docker compose --env-file "$root/.env" -p scran -f "$checkout/compose.yaml" "$@"; }
 compose build
+# Fail on origin/cookie/budget misconfiguration before stopping the old service.
+# Import config only: no migrations, source reads, or secret output.
+compose run --rm --no-deps --entrypoint bun scran -e "await import('./server/src/config.ts')"
 if [ "${1:-}" = --prepare ]; then
   echo "Validated and built $SCRAN_IMAGE. No container was replaced."
   exit 0
@@ -41,6 +45,7 @@ fi
 old=$(compose ps -q scran)
 if [ -n "$old" ]; then docker inspect --format '{{.Image}}' "$old" > "$state/previous-image"; fi
 mkdir -p "$root/backups"
+chmod 700 "$root/backups"
 backup="$root/backups/scran-before-$sha-$(date +%Y%m%d-%H%M%S).tar.gz"
 # No writes while copying SQLite, its sidecars, and sources together.
 compose stop scran
@@ -50,6 +55,11 @@ if [ -d "$SCRAN_DATA_DIR" ]; then
   tar -czf "$backup" -C "$root" data
   echo "Data backup: $backup"
 fi
+# The runtime now runs as uid/gid 1000 (bun). Normalize an existing root-owned
+# bind mount only after backing it up. No shell receives deployment secrets.
+mkdir -p "$SCRAN_DATA_DIR"
+docker run --rm --user 0:0 --entrypoint sh -v "$SCRAN_DATA_DIR:/data:Z" \
+  "$SCRAN_IMAGE" -c 'chown -R 1000:1000 /data && chmod 700 /data'
 # From here a new process can migrate the database. Do not blindly restart an
 # old image against a potentially changed schema on failure.
 trap - EXIT
