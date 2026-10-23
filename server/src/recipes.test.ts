@@ -317,6 +317,33 @@ describe('deleting', () => {
   });
 });
 
+describe('catalogue attribution', () => {
+  it('keeps the original contributor through status changes, edits and search', async () => {
+    const owner = await person();
+    const editor = await person();
+    db.run('UPDATE "user" SET name = ? WHERE id = ?', ['Alex & Sam', owner]);
+    const { id } = await capture(owner, { kind: 'photo', data: photo() });
+    const attribution = {
+      createdByUserId: owner,
+      createdByUserName: 'Alex & Sam',
+    };
+
+    expect(list().find(recipe => recipe.id === id)).toMatchObject(attribution);
+    db.run("UPDATE recipe SET status = 'failed' WHERE id = ?", [id]);
+    expect(list().find(recipe => recipe.id === id)).toMatchObject(attribution);
+    addVersion(id, { userId: owner, content: content('Contributor stew') });
+    edit(id, editor, content('Contributor soup'));
+    expect(list('Contributor').find(recipe => recipe.id === id)).toMatchObject(
+      attribution,
+    );
+
+    db.run('UPDATE "user" SET name = ? WHERE id = ?', ['Alexandra', owner]);
+    expect(list().find(recipe => recipe.id === id)?.createdByUserName).toBe(
+      'Alexandra',
+    );
+  });
+});
+
 describe('search', () => {
   it('finds a recipe by its ingredients, and by a tag it never says', async () => {
     // Arrange

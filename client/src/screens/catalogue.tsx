@@ -227,12 +227,24 @@ export function Catalogue() {
                     className="border-line hover:bg-panel flex min-h-20 items-center gap-4 border-b px-4 py-4 transition-colors"
                   >
                     <div className="min-w-0 flex-1">
-                      <p className="type-body font-semibold">
+                      <p className="type-body font-semibold break-words">
                         {recipe.name ?? statusName(recipe)}
                       </p>
-                      <p className="type-label text-ink-muted mt-1 truncate">
-                        {summary(recipe)}
-                      </p>
+                      <div className="type-label text-ink-muted mt-1 break-words">
+                        {summary(recipe) && <>{summary(recipe)} · </>}
+                        <span>
+                          Added by{' '}
+                          {recipe.createdByUserId === session.data?.user.id
+                            ? 'you'
+                            : recipe.createdByUserName?.trim() ||
+                              'a household member'}
+                        </span>
+                      </div>
+                      {recipe.tags.length > 0 && (
+                        <p className="type-label text-ink-muted mt-1 truncate">
+                          {recipe.tags.join(' · ')}
+                        </p>
+                      )}
                     </div>
                     {mark && (
                       <span
@@ -417,7 +429,7 @@ function summary(recipe: RecipeSummary): string {
   const time = recipe.totalMinutes
     ? `${recipe.timeEstimated ? '~' : ''}${recipe.totalMinutes} min`
     : null;
-  return [time, ...recipe.tags].filter(Boolean).join(' · ');
+  return time ?? '';
 }
 
 function statusName(recipe: RecipeSummary): string {

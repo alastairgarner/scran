@@ -871,6 +871,8 @@ export function get(recipeId: number) {
 
 type ListRow = {
   id: number;
+  createdByUserId: string;
+  createdByUserName: string | null;
   status: RecipeStatus;
   failureReason: 'no_recipe' | null;
   createdAt: string;
@@ -896,11 +898,14 @@ export function list(query?: string) {
   const rows = db
     .query(
       `${match ? 'WITH hit AS (SELECT rowid AS id, rank FROM recipeSearch WHERE recipeSearch MATCH ?)' : ''}
-       SELECT r.id, r.status, r.failureReason, r.createdAt, v.name, v.totalMinutes, v.timeEstimated,
+       SELECT r.id, r.status, r.failureReason, r.createdAt,
+              r.createdByUserId, u.name AS createdByUserName,
+              v.name, v.totalMinutes, v.timeEstimated,
               (SELECT json_group_array(tag) FROM recipeTag WHERE recipeId = r.id) AS tags,
               (SELECT json_group_array(json_object('userId', userId, 'score', score))
                FROM rating WHERE recipeId = r.id) AS ratings
        FROM recipe r
+       LEFT JOIN "user" u ON u.id = r.createdByUserId
        LEFT JOIN recipeVersion v
          ON v.recipeId = r.id
         AND v.versionNo = (
