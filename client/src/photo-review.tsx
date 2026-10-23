@@ -2,7 +2,7 @@ import type { PhotoRotation } from '@scran/shared';
 import { useEffect, useRef, useState } from 'react';
 
 import { previewPhoto } from './api/recipes';
-import { Button } from './ui';
+import { Button, Feedback } from './ui';
 
 type Preview =
   | { kind: 'loading' }
@@ -102,10 +102,10 @@ export function PhotoReview({
   return (
     <section className="space-y-4" aria-labelledby="photo-review-title">
       <div className="space-y-2">
-        <h2 id="photo-review-title" className="type-title font-bold">
+        <h2 id="photo-review-title" className="type-heading font-semibold">
           Check your photo
         </h2>
-        <p id="photo-orientation-help" className="type-body">
+        <p id="photo-orientation-help" className="type-control text-ink-muted">
           Make sure the text is upright. Sideways pages can lead to missing
           ingredients or incorrect quantities.
         </p>
@@ -120,11 +120,11 @@ export function PhotoReview({
             className="max-h-[55dvh] w-full object-contain"
           />
         ) : (
-          <p className="type-label text-ink-muted p-4" role="status">
+          <Feedback tone={preview.kind === 'error' ? 'error' : 'neutral'}>
             {preview.kind === 'loading'
               ? 'Loading your photo…'
               : preview.message}
-          </p>
+          </Feedback>
         )}
       </div>
       <div className="flex flex-wrap gap-2">
@@ -132,6 +132,7 @@ export function PhotoReview({
           type="button"
           className="flex-1"
           disabled={busy || preview.kind !== 'ready'}
+          variant="secondary"
           onClick={() => setRotation(nextRotation[rotation])}
         >
           ↻ Rotate 90°
@@ -140,6 +141,7 @@ export function PhotoReview({
           type="button"
           className="flex-1"
           disabled={busy}
+          variant="quiet"
           onClick={onRetake}
         >
           Retake photo
@@ -153,7 +155,8 @@ export function PhotoReview({
       <Button
         type="button"
         className="w-full"
-        disabled={busy || preview.kind !== 'ready'}
+        loading={busy}
+        disabled={preview.kind !== 'ready'}
         onClick={() => onExtract(rotation)}
       >
         {busy ? 'Saving…' : 'Extract recipe'}

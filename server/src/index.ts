@@ -73,7 +73,7 @@ const routes = app.route('/', invites).route('/', recipeRoutes);
 app.get('/assets/*', serveStatic({ root: './client/dist' }));
 app.on(
   'GET',
-  ['/', '/signin', '/invite/:token', '/capture', '/recipes/:id'],
+  ['/', '/signin', '/invite/:token', '/capture', '/recipes/:id', '/ui'],
   serveStatic({ path: './client/dist/index.html' }),
 );
 

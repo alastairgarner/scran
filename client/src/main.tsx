@@ -7,6 +7,7 @@ import { Invite, RequireAuth, SignIn } from './screens/auth';
 import { Capture } from './screens/capture';
 import { Catalogue } from './screens/catalogue';
 import { Recipe } from './screens/recipe';
+import { UiExamples } from './screens/ui-examples';
 
 import './theme.css';
 
@@ -27,6 +28,14 @@ createRoot(rootEl).render(
       <BrowserRouter>
         <Routes>
           <Route path="/signin" element={<SignIn />} />
+          <Route
+            path="/ui"
+            element={
+              <Protected>
+                <UiExamples />
+              </Protected>
+            }
+          />
           <Route path="/invite/:token" element={<Invite />} />
           <Route
             path="/"

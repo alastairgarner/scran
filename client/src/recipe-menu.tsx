@@ -1,5 +1,7 @@
 import { useEffect, useRef } from 'react';
 
+import { Button } from './ui';
+
 export function RecipeMenu({
   disabled,
   canRead,
@@ -58,32 +60,32 @@ export function RecipeMenu({
         </span>
       </summary>
       <div className="rounded-ui border-line bg-panel shadow-card absolute right-0 z-30 mt-1 w-56 border p-1">
-        <button
-          type="button"
+        <Button
+          variant="quiet"
+          className="w-full justify-start"
           disabled={disabled}
           onClick={() => run(onEdit)}
-          className="hover:bg-background block min-h-11 w-full px-4 text-left disabled:opacity-50"
         >
           Edit
-        </button>
-        <button
-          type="button"
+        </Button>
+        <Button
+          variant="quiet"
+          className="w-full justify-start"
           disabled={disabled || !canRead}
           title={canRead ? undefined : 'This recipe has no saved source'}
           onClick={() => run(onRead)}
-          className="hover:bg-background block min-h-11 w-full px-4 text-left disabled:opacity-50"
         >
           Read source again
-        </button>
+        </Button>
         {onDelete && (
-          <button
-            type="button"
+          <Button
+            variant="destructive"
             disabled={disabled}
             onClick={() => run(onDelete)}
-            className="text-danger border-line hover:bg-background mt-1 block min-h-11 w-full border-t px-4 text-left disabled:opacity-50"
+            className="mt-1 w-full justify-start"
           >
             Delete
-          </button>
+          </Button>
         )}
       </div>
     </details>

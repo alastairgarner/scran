@@ -23,14 +23,16 @@
   --ink-muted: oklch(0.45 0.03 60);
   --accent: oklch(0.55 0.14 42);
   --accent-ink: oklch(0.99 0.008 85);
-  --line: oklch(0.91 0.02 82);
+  --line: oklch(0.87 0.018 82);
+  --selection: oklch(0.94 0.025 85);
+  --selection-line: oklch(0.65 0.045 70);
   --danger: oklch(0.56 0.17 25);
   --success: oklch(0.58 0.14 152);
   --font-reading:
     "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
   --font-ui: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
   --card-shadow: 0 1px 2px oklch(0.24 0.028 55 / 0.08);
-  --ui-radius: 0.75rem;
+  --ui-radius: 0.5rem;
   --pill-radius: 9999px;
   --sheet-radius: 1.5rem;
 }
@@ -42,7 +44,9 @@
   --ink-muted: oklch(0.83 0.028 80);
   --accent: oklch(0.72 0.11 44);
   --accent-ink: oklch(0.17 0.022 55);
-  --line: oklch(0.32 0.02 55);
+  --line: oklch(0.36 0.02 55);
+  --selection: oklch(0.3 0.03 70);
+  --selection-line: oklch(0.65 0.045 70);
   --danger: oklch(0.72 0.14 25);
   --success: oklch(0.74 0.12 152);
   --card-shadow: 0 1px 2px oklch(0 0 0 / 0.5);
@@ -56,6 +60,8 @@
   --color-accent: var(--accent);
   --color-accent-ink: var(--accent-ink);
   --color-line: var(--line);
+  --color-selection: var(--selection);
+  --color-selection-line: var(--selection-line);
   --color-danger: var(--danger);
   --color-success: var(--success);
   --radius-ui: var(--ui-radius);
@@ -69,6 +75,20 @@
   font-size: 0.875rem;
   line-height: 1.25rem;
   letter-spacing: 0.025em;
+}
+
+@utility type-control {
+  font-family: var(--font-ui);
+  font-size: 1rem;
+  line-height: 1.5rem;
+  letter-spacing: 0;
+}
+
+@utility type-heading {
+  font-family: var(--font-ui);
+  font-size: 1.125rem;
+  line-height: 1.5rem;
+  letter-spacing: -0.01em;
 }
 
 @utility type-body {
@@ -97,12 +117,71 @@
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
-@utility bottom-clearance {
-  padding-bottom: 10rem;
+/* Pair the persistent drawer with .drawer-layout. Its collapsed bar stays visible
+   without hiding the final page content. Expanded content is removed from the
+   mobile tab order when collapsed, rather than translated off screen. */
+.drawer-layout {
+  padding-bottom: calc(6rem + env(safe-area-inset-bottom, 0px));
 }
 
-@utility bottom-sheet-clearance {
-  padding-bottom: 8rem;
+.persistent-drawer {
+  position: fixed;
+  inset-inline: 0;
+  bottom: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  max-height: 75dvh;
+  max-width: 42rem;
+  margin-inline: auto;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  background: var(--panel);
+  border-top: 1px solid var(--line);
+  border-radius: var(--sheet-radius) var(--sheet-radius) 0 0;
+}
+
+.drawer-toggle {
+  flex-shrink: 0;
+  min-height: 4.5rem;
+}
+
+.drawer-content {
+  display: none;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  padding: 0 1.5rem 1.5rem;
+}
+
+.persistent-drawer[data-open="true"] .drawer-content {
+  display: block;
+}
+
+@media (width >= 64rem) {
+  .drawer-layout {
+    padding-bottom: 0;
+  }
+
+  .persistent-drawer {
+    position: static;
+    grid-column: 1;
+    grid-row: 1;
+    height: 100dvh;
+    max-height: none;
+    max-width: none;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-right: 1px solid var(--line);
+    border-radius: 0;
+  }
+
+  .persistent-drawer .drawer-content {
+    display: block;
+    flex: 1;
+    padding-top: 2rem;
+    padding-bottom: 2rem;
+  }
 }
 
 /* The viewport meta opts Chromium into resizing the layout for the keyboard,
@@ -160,6 +239,9 @@
     margin: 0;
     background: var(--background);
     color: var(--ink);
+    font-family: var(--font-ui);
+    font-size: 1rem;
+    line-height: 1.5;
     -webkit-text-size-adjust: 100%;
   }
 
@@ -178,7 +260,8 @@
   button:focus-visible,
   input:focus-visible,
   textarea:focus-visible,
-  a:focus-visible {
+  a:focus-visible,
+  summary:focus-visible {
     outline: 2px solid var(--accent);
     outline-offset: 2px;
   }

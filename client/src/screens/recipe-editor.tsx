@@ -7,7 +7,15 @@ import { useFieldArray, useForm } from 'react-hook-form';
 
 import { editRecipe, recipeKeys, updateRecipeTags } from '../api/recipes';
 import { ingredientFromText } from '../ingredient-edit';
-import { Button, Field } from '../ui';
+import {
+  Button,
+  Checkbox,
+  Feedback,
+  Field,
+  PageHeader,
+  Section,
+  Textarea,
+} from '../ui';
 
 const nullableText = (value: unknown) =>
   typeof value === 'string' && value.trim() ? value : null;
@@ -64,27 +72,25 @@ export function RecipeEditor({
           void form.handleSubmit(values => save.mutate(values))(event)
         }
       >
-        <header className="bg-background sticky top-0 z-10 flex items-center justify-between gap-4 py-3">
-          <h1 className="type-title font-bold">Edit recipe</h1>
-          <div className="flex gap-3">
-            <button
-              type="button"
-              disabled={save.isPending}
-              onClick={onClose}
-              className="text-ink-muted min-h-11 px-3 underline"
-            >
-              Cancel
-            </button>
-            <Button disabled={save.isPending}>
-              {save.isPending ? 'Saving…' : 'Done'}
-            </Button>
-          </div>
-        </header>
-        {save.error && (
-          <p role="alert" className="text-danger">
-            {save.error.message}
-          </p>
-        )}
+        <PageHeader
+          title="Edit recipe"
+          sticky
+          actions={
+            <>
+              <Button
+                variant="quiet"
+                disabled={save.isPending}
+                onClick={onClose}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" loading={save.isPending}>
+                {save.isPending ? 'Saving…' : 'Save'}
+              </Button>
+            </>
+          }
+        />
+        {save.error && <Feedback tone="error">{save.error.message}</Feedback>}
         <fieldset
           disabled={save.isPending}
           className="space-y-8 disabled:opacity-50"
@@ -111,8 +117,7 @@ export function RecipeEditor({
             heading="Method"
           />
           <Lines form={form} name="notes" label="Note" heading="Notes" />
-          <section className="space-y-4">
-            <h2 className="type-body font-bold">Details</h2>
+          <Section title="Details">
             <Field
               label="Description"
               {...form.register('description', { setValueAs: nullableText })}
@@ -157,35 +162,26 @@ export function RecipeEditor({
                 })}
               />
             </div>
-            <label className="flex min-h-11 items-center gap-3">
-              <input
-                type="checkbox"
-                checked={form.watch('timeEstimated') === true}
-                onChange={event =>
-                  form.setValue('timeEstimated', event.target.checked)
-                }
-              />
-              Total minutes are an estimate
-            </label>
-          </section>
-          <section>
-            <h2 className="type-body mb-3 font-bold">Tags</h2>
+            <Checkbox
+              label="Total minutes are an estimate"
+              checked={form.watch('timeEstimated') === true}
+              onChange={event =>
+                form.setValue('timeEstimated', event.target.checked)
+              }
+            />
+          </Section>
+          <Section title="Tags">
             <div className="grid grid-cols-2 gap-3">
               {TAGS.map(tag => (
-                <label
+                <Checkbox
                   key={tag.id}
-                  className="flex min-h-11 items-center gap-3"
-                >
-                  <input
-                    type="checkbox"
-                    checked={selectedTags.includes(tag.id)}
-                    onChange={() => toggleTag(tag.id)}
-                  />
-                  {tag.label}
-                </label>
+                  label={tag.label}
+                  checked={selectedTags.includes(tag.id)}
+                  onChange={() => toggleTag(tag.id)}
+                />
               ))}
             </div>
-          </section>
+          </Section>
         </fieldset>
       </form>
     </main>
@@ -224,40 +220,41 @@ function Lines({
   };
   const gap = (index: number) =>
     moving === null ? (
-      <button
-        type="button"
+      <Button
+        variant="quiet"
+        className="w-full"
         onClick={() => add(index)}
         aria-label={`Add ${label.toLowerCase()} at position ${index + 1}`}
-        className="text-accent min-h-11 w-full"
       >
         + Add {label.toLowerCase()}
-      </button>
+      </Button>
     ) : (
-      <button
-        type="button"
+      <Button
+        variant="secondary"
+        className="w-full"
         disabled={index === moving || index === moving + 1}
         onClick={() => place(index)}
         aria-label={`Place ${label.toLowerCase()} at position ${index + 1}`}
-        className="text-accent border-line rounded-ui min-h-11 w-full border border-dashed disabled:opacity-30"
       >
         Place here
-      </button>
+      </Button>
     );
 
   return (
-    <section>
-      <div className="mb-3 flex items-center justify-between gap-3">
-        <h2 className="type-body font-bold">{heading}</h2>
-        {moving !== null && (
-          <button
-            type="button"
-            className="text-accent min-h-11 underline"
+    <Section
+      title={heading}
+      actions={
+        moving !== null && (
+          <Button
+            variant="quiet"
+            size="compact"
             onClick={() => setMoving(null)}
           >
             Cancel move
-          </button>
-        )}
-      </div>
+          </Button>
+        )
+      }
+    >
       {fields.map((line, index) => {
         const text = form.register(`${name}.${index}.text`, {
           validate: value =>
@@ -266,28 +263,26 @@ function Lines({
         const error = form.formState.errors[name]?.[index]?.text?.message;
         return (
           <Fragment key={line.id}>
-            {gap(index)}
+            {moving !== null && gap(index)}
             <div
-              className={`rounded-ui border-line bg-panel border p-4 ${moving === index ? 'ring-accent ring-2' : ''}`}
+              className={`border-line border-b py-3 ${moving === index ? 'rounded-ui ring-accent ring-2' : ''}`}
             >
               <div className="mb-2 flex items-center justify-between gap-3">
-                <label
-                  htmlFor={`${name}-${line.id}`}
-                  className="type-label font-semibold"
-                >
+                <span className="type-label text-ink-muted">
                   {label} {index + 1}
-                </label>
+                </span>
                 <div className="flex gap-3">
-                  <button
-                    type="button"
+                  <Button
+                    variant="quiet"
+                    size="compact"
                     aria-label={`Move ${label.toLowerCase()} ${index + 1}`}
                     onClick={() => setMoving(index)}
-                    className="text-ink-muted min-h-11 underline"
                   >
                     Move
-                  </button>
-                  <button
-                    type="button"
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    size="compact"
                     aria-label={`Remove ${label.toLowerCase()} ${index + 1}`}
                     onClick={() => {
                       const title = form.getValues(`${name}.${index}.title`);
@@ -301,26 +296,32 @@ function Lines({
                       remove(index);
                       setMoving(null);
                     }}
-                    className="text-danger min-h-11 underline"
                   >
                     Remove
-                  </button>
+                  </Button>
                 </div>
               </div>
               {name !== 'instructions' && (
-                <input
-                  aria-label={`${label} ${index + 1} section title`}
-                  placeholder="Section title (optional)"
-                  className="border-line bg-background rounded-ui mb-3 min-h-11 w-full border px-3"
-                  {...form.register(`${name}.${index}.title`, {
-                    setValueAs: nullableText,
-                  })}
-                />
+                <details className="mb-3" open={line.title ? true : undefined}>
+                  <summary className="type-label text-ink-muted min-h-11 cursor-pointer py-3">
+                    Section heading (optional)
+                  </summary>
+                  <Field
+                    label={`${label} ${index + 1} section title`}
+                    hideLabel
+                    placeholder="For the sauce, for example"
+                    {...form.register(`${name}.${index}.title`, {
+                      setValueAs: nullableText,
+                    })}
+                  />
+                </details>
               )}
-              <textarea
+              <Textarea
+                label={`${label} ${index + 1}`}
+                hideLabel
                 id={`${name}-${line.id}`}
-                rows={3}
-                className="border-line bg-background rounded-ui w-full border px-3 py-3"
+                rows={name === 'instructions' ? 3 : 1}
+                error={error}
                 {...text}
                 onChange={event => {
                   void text.onChange(event);
@@ -339,16 +340,11 @@ function Lines({
                   }
                 }}
               />
-              {error && (
-                <p role="alert" className="text-danger mt-2">
-                  {error}
-                </p>
-              )}
             </div>
           </Fragment>
         );
       })}
       {gap(fields.length)}
-    </section>
+    </Section>
   );
 }

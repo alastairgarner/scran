@@ -18,6 +18,29 @@ for an isolated seeded UI; deploy merged `origin/main` with `bun run deploy`.
 Develop and test in parallel, but coordinate one agent at a time to merge locally,
 validate the combined result, push main, and deploy.
 
+## UI direction
+
+Shared components and usage: [docs/ui.md](docs/ui.md). Live examples: `/ui`
+(requires sign-in).
+
+A warm, contemporary household cookbook: editorial content, quiet utility controls.
+
+- Recipe titles and reading content use serif typography. Navigation, buttons,
+  form controls and metadata use sans-serif.
+- Prioritise finding, reading and cooking recipes; editing and household feedback
+  support those tasks rather than competing with them.
+- Prefer flat surfaces, clear hierarchy and purposeful whitespace. Add borders
+  and containers only when they clarify grouping; avoid nested cards.
+- Use moderately rounded controls; reserve pills mainly for tags and filters.
+  Reserve strong accent fills for primary actions; selection is a separate role.
+- Keep common tasks compact and obvious. Reveal optional structure and advanced
+  metadata when needed rather than exposing the storage model by default.
+- Reuse shared UI components and established screen patterns. When a recurring
+  pattern is missing, add the smallest reusable pattern rather than inventing
+  another feature-local style. Keep recipe-specific behaviour in feature code.
+- Validate UI changes in the seeded preview at phone and desktop widths, including
+  long content and relevant loading, empty and error states.
+
 ## Agent skills
 
 ### Issue tracker

@@ -6,7 +6,7 @@ import { Navigate, useNavigate, useParams } from 'react-router';
 
 import { errorMessage } from '../api/client';
 import { authClient } from '../auth';
-import { Button, Card, Field } from '../ui';
+import { Button, Card, EmptyState, Feedback, Field, PageHeader } from '../ui';
 
 type SignInValues = { email: string; password: string };
 
@@ -60,8 +60,12 @@ export function SignIn() {
           error={form.formState.errors.password?.message}
           {...form.register('password', { required: 'Enter your password.' })}
         />
-        {error && <p className="type-label text-danger">{error}</p>}
-        <Button className="w-full" disabled={form.formState.isSubmitting}>
+        {error && <Feedback tone="error">{error}</Feedback>}
+        <Button
+          type="submit"
+          className="w-full"
+          loading={form.formState.isSubmitting}
+        >
           {form.formState.isSubmitting ? 'Signing in…' : 'Sign in'}
         </Button>
       </form>
@@ -170,8 +174,12 @@ export function Invite() {
           error={form.formState.errors.password?.message}
           {...form.register('password')}
         />
-        {error && <p className="type-label text-danger">{error}</p>}
-        <Button className="w-full" disabled={form.formState.isSubmitting}>
+        {error && <Feedback tone="error">{error}</Feedback>}
+        <Button
+          type="submit"
+          className="w-full"
+          loading={form.formState.isSubmitting}
+        >
           {form.formState.isSubmitting ? 'Joining…' : 'Create account'}
         </Button>
       </form>
@@ -188,9 +196,11 @@ function AuthShell({
 }) {
   return (
     <main className="mx-auto flex min-h-dvh max-w-md items-center p-4">
-      <Card className="w-full p-6">
+      <Card className="w-full">
         <p className="type-label text-accent font-bold uppercase">scran</p>
-        <h1 className="type-title mt-2 mb-6 font-bold">{title}</h1>
+        <div className="mb-4">
+          <PageHeader title={title} />
+        </div>
         {children}
       </Card>
     </main>
@@ -199,8 +209,8 @@ function AuthShell({
 
 function PageMessage({ children }: { children: React.ReactNode }) {
   return (
-    <main className="text-ink-muted grid min-h-dvh place-items-center p-6 text-center">
-      <p>{children}</p>
+    <main className="grid min-h-dvh items-center">
+      <EmptyState title="scran">{children}</EmptyState>
     </main>
   );
 }
