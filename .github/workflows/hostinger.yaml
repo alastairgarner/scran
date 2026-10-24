@@ -5,6 +5,11 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      diagnose:
+        description: Read deployment status only; do not build or deploy
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -15,7 +20,38 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  diagnose:
+    if: github.event_name == 'workflow_dispatch' && inputs.diagnose
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    environment: hostinger-production
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - name: Read provider container status without changing the deployment
+        env:
+          HOSTINGER_API_KEY: ${{ secrets.HOSTINGER_API_KEY }}
+          HOSTINGER_VM_ID: ${{ vars.HOSTINGER_VM_ID }}
+        run: |
+          python3 - <<'PY'
+          import json, os, runpy
+          probe = runpy.run_path('scripts/wait-hostinger.py', run_name='probe')
+          vm = os.environ['HOSTINGER_VM_ID']
+          if not vm.isdigit():
+              raise SystemExit('VM ID must be numeric')
+          url = f"{probe['API']}/{vm}/docker/scran-hostinger/containers"
+          containers = probe['get_json'](url, os.environ['HOSTINGER_API_KEY'])
+          if not isinstance(containers, list):
+              raise SystemExit('Unexpected provider response shape')
+          for container in containers:
+              print(json.dumps({key: container.get(key) for key in ('name', 'image', 'state', 'health', 'status')}))
+          if not containers:
+              print('No containers reported for scran-hostinger')
+          PY
+
   verify:
+    if: github.event_name != 'workflow_dispatch' || !inputs.diagnose
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:

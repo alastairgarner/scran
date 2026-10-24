@@ -4,10 +4,10 @@
 import json
 import os
 import re
+import subprocess
 import sys
 import time
 import urllib.error
-import urllib.request
 
 
 API = "https://developers.hostinger.com/api/vps/v1/virtual-machines"
@@ -30,13 +30,29 @@ def release_is_healthy(containers, images):
 
 
 def get_json(url, token=None):
+    # Match the official action's curl transport. Hostinger's edge can deny
+    # Python's default HTTP client or an IPv6 egress path independently of API
+    # authorization. Never print response bodies or put tokens in process args.
     headers = {"Accept": "application/json", "Cache-Control": "no-cache"}
     if token is not None:
         headers["Authorization"] = f"Bearer {token}"
-    with urllib.request.urlopen(
-        urllib.request.Request(url, headers=headers), timeout=20
-    ) as response:
-        return json.load(response)
+    config = "".join(
+        'header = ' + json.dumps(f"{key}: {value}") + "\n"
+        for key, value in headers.items()
+    )
+    result = subprocess.run(
+        ["curl", "--ipv4", "--silent", "--show-error", "--max-time", "20",
+         "--config", "-", "--write-out", "\n%{http_code}", url],
+        input=config, capture_output=True, text=True,
+    )
+    if result.returncode != 0:
+        raise urllib.error.URLError("HTTPS request failed")
+    body, separator, status = result.stdout.rpartition("\n")
+    if not separator or not status.isdigit():
+        raise urllib.error.URLError("HTTPS response lacked a status")
+    if not 200 <= int(status) < 300:
+        raise urllib.error.HTTPError(url, int(status), "HTTPS request failed", {}, None)
+    return json.loads(body)
 
 
 def wait_for_release(*, vm, token, images, host, release, timeout=600):
@@ -66,7 +82,8 @@ def wait_for_release(*, vm, token, images, host, release, timeout=600):
         except urllib.error.HTTPError as error:
             # Don't dump provider responses: project settings can contain secrets.
             if error.code in (401, 403):
-                raise RuntimeError("Deployment verification was denied (HTTP 401/403)") from None
+                target = "Hostinger API" if error.url.startswith(API) else "Public HTTPS endpoint"
+                raise RuntimeError(f"{target} denied deployment verification (HTTP {error.code})") from None
             if error.code not in (404, 408, 422, 429) and error.code < 500:
                 raise RuntimeError(f"Deployment verification failed (HTTP {error.code})") from None
         except (urllib.error.URLError, TimeoutError, json.JSONDecodeError):

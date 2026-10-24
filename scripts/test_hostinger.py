@@ -23,6 +23,24 @@ class DeploymentHealthTests(unittest.TestCase):
     def containers(self):
         return [{"image": image, "state": "running", "health": "healthy"} for image in IMAGES]
 
+    def test_transport_uses_ipv4_and_keeps_api_token_out_of_process_args(self):
+        response = subprocess.CompletedProcess([], 0, '{"ok": true}\n200', '')
+        with patch.object(wait_hostinger.subprocess, "run", return_value=response) as run:
+            self.assertEqual(wait_hostinger.get_json("https://example.com", "private-token"), {"ok": True})
+        args = run.call_args.args[0]
+        self.assertIn("--ipv4", args)
+        self.assertFalse(any("private-token" in arg for arg in args))
+        self.assertIn("private-token", run.call_args.kwargs["input"])
+
+    def test_transport_distinguishes_http_denial_from_connection_failure(self):
+        for response, error in [
+            (subprocess.CompletedProcess([], 0, 'denied\n403', ''), wait_hostinger.urllib.error.HTTPError),
+            (subprocess.CompletedProcess([], 28, '', 'connection timed out'), wait_hostinger.urllib.error.URLError),
+        ]:
+            with patch.object(wait_hostinger.subprocess, "run", return_value=response):
+                with self.assertRaises(error):
+                    wait_hostinger.get_json("https://example.com", "private-token")
+
     def test_requires_both_new_images_and_healthy_containers(self):
         containers = self.containers()
         self.assertTrue(wait_hostinger.release_is_healthy(containers, IMAGES))
