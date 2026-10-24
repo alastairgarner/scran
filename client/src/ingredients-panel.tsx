@@ -73,34 +73,42 @@ function Scaler({
         <span className="type-label text-ink-muted">
           {recipeYield?.match(/serv/i) ? 'Serves' : 'Makes'}
         </span>
-        <div className="rounded-ui border-line ml-auto flex items-center border">
+        <div className="ml-auto flex items-center gap-2">
           <Button
             variant="quiet"
             size="compact"
-            aria-label="One fewer"
-            disabled={servings <= 1}
-            onClick={() => onFactor(Math.max(1, servings - 1) / yieldQuantity)}
+            className={factor === 1 ? 'invisible' : undefined}
+            disabled={factor === 1}
+            onClick={() => onFactor(1)}
           >
-            −
-          </Button>
-          <span className="type-control min-w-8 text-center font-semibold tabular-nums">
-            {servings}
-            {!recipeYield?.match(/serv/i) && yieldUnit ? ` ${yieldUnit}` : ''}
-          </span>
-          <Button
-            variant="quiet"
-            size="compact"
-            aria-label="One more"
-            onClick={() => onFactor((servings + 1) / yieldQuantity)}
-          >
-            +
-          </Button>
-        </div>
-        {factor !== 1 && (
-          <Button variant="quiet" size="compact" onClick={() => onFactor(1)}>
             Reset
           </Button>
-        )}
+          <div className="rounded-ui border-line flex items-center border">
+            <Button
+              variant="quiet"
+              size="compact"
+              aria-label="One fewer"
+              disabled={servings <= 1}
+              onClick={() =>
+                onFactor(Math.max(1, servings - 1) / yieldQuantity)
+              }
+            >
+              −
+            </Button>
+            <span className="type-control min-w-8 text-center font-semibold tabular-nums">
+              {servings}
+              {!recipeYield?.match(/serv/i) && yieldUnit ? ` ${yieldUnit}` : ''}
+            </span>
+            <Button
+              variant="quiet"
+              size="compact"
+              aria-label="One more"
+              onClick={() => onFactor((servings + 1) / yieldQuantity)}
+            >
+              +
+            </Button>
+          </div>
+        </div>
       </div>
     );
   }
