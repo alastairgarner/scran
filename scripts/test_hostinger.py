@@ -88,6 +88,7 @@ class ManifestTests(unittest.TestCase):
         self.assertNotIn("OPENAI_API_KEY", caddy_environment := model["services"]["caddy"]["environment"])
         self.assertNotIn("AUTH_SECRET", caddy_environment)
         self.assertTrue(app["read_only"])
+        self.assertEqual(float(app["cpus"]), 1.0)
         self.assertEqual(app["cap_drop"], ["ALL"])
         self.assertEqual({v["source"] for v in app["volumes"]}, {"/opt/scran/data", "/opt/scran/backups"})
         caddy = model["services"]["caddy"]

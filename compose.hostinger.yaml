@@ -13,7 +13,9 @@ services:
     tmpfs:
       - /tmp:size=64m,mode=1777
     mem_limit: 2g
-    cpus: 2
+    # The entry-level Hostinger VPS has one vCPU. This is a ceiling, not a
+    # reservation; Caddy can still share CPU time with the app.
+    cpus: 1
     pids_limit: 128
     logging:
       driver: json-file

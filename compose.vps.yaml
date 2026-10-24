@@ -9,6 +9,7 @@ services:
       file: compose.yaml
       service: scran
     image: ${SCRAN_IMAGE:-scran-vps-app}
+    cpus: 1
     # Only Caddy can reach the app; no public or loopback host port is needed.
     ports: !reset []
     environment:
