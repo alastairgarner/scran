@@ -147,7 +147,20 @@ app=$(docker ps -q --filter label=com.docker.compose.project=scran-hostinger \
 docker exec "$app" bun server/src/cli/invite.ts you@example.com
 ```
 
-Share the printed link privately. Complete the authenticated/anonymous and
+Open the printed link privately and create your own account. Then appoint that
+existing account as the single admin (replace the example email with yours):
+
+```sh
+docker exec "$app" bun server/src/cli/accounts.ts make-admin you@example.com
+```
+
+Refresh the app, then go to **Account → Administration** to manage member
+accounts and create further invites. New signups are always members; the first
+signup is not automatically an admin. The setup command is idempotent for your
+account and refuses to appoint a different admin. Keep terminal access for recovery.
+Never paste invite links or generated recovery passwords into issues or chat.
+
+Complete the authenticated/anonymous and
 Cloudflare forwarding-header checks in [the VPS guide](vps.md) before inviting
 others. Public HTTPS proves connectivity; it is not a penetration test.
 

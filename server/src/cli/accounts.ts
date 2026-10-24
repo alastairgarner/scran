@@ -2,14 +2,16 @@ import {
   disableAccount,
   enableAccount,
   listAccounts,
+  makeAdmin,
   migrateAuth,
   resetPassword,
 } from '../auth';
 import { db, migrate } from '../db';
 /**
- * Operator controls for accounts. Shell access to the server is the authority;
- * there is no admin role to grant or lose.
+ * Operator controls for accounts. Shell access authorises bootstrap and resets.
+ * Only one enabled account can be bootstrapped as the application administrator.
  *
+ *   bun run accounts make-admin <email>      bootstrap the sole administrator
  *   bun run accounts list                    every account, disabled marked
  *   bun run accounts disable <email>         lock out and sign out everywhere
  *   bun run accounts enable <email>          allow signing in again
@@ -31,8 +33,13 @@ try {
       const state = account.disabledAt
         ? `disabled ${account.disabledAt}`
         : 'active';
-      process.stdout.write(`${account.email}\t${account.name}\t${state}\n`);
+      process.stdout.write(
+        `${account.email}\t${account.name}\t${account.role}\t${state}\n`,
+      );
     }
+  } else if (command === 'make-admin' && email) {
+    makeAdmin(email);
+    process.stdout.write(`Administrator: ${email}.\n`);
   } else if (command === 'disable' && email) {
     await disableAccount(email);
     process.stdout.write(`Disabled ${email} and signed out every device.\n`);
@@ -46,7 +53,7 @@ try {
     );
   } else {
     process.stderr.write(
-      'Usage: bun run accounts list | disable <email> | enable <email> | reset-password <email>\n',
+      'Usage: bun run accounts list | make-admin <email> | disable <email> | enable <email> | reset-password <email>\n',
     );
     process.exit(1);
   }

@@ -3,7 +3,10 @@
 Scran is **one shared household**, not a multi-tenant service. Invite only people
 trusted to see all recipes, source previews, comments and history, edit recipes,
 and use the household's extraction allowance. Only authors delete their own
-recipes/comments. Do not promise separate private catalogues to friends.
+recipes/comments, including when the viewer is an admin. Do not promise separate
+private catalogues to friends. Accounts have one application-wide role:
+`member` (the default) or `admin`. The single admin manages access, not other
+people's content.
 
 ## Review and controls
 
@@ -53,11 +56,35 @@ docker compose exec scran bun server/src/cli/invite.ts person@example.com
 docker compose exec scran bun server/src/cli/invite.ts list
 docker compose exec scran bun server/src/cli/invite.ts revoke 12
 
+docker compose exec scran bun server/src/cli/accounts.ts make-admin you@example.com
 docker compose exec scran bun server/src/cli/accounts.ts list
 docker compose exec scran bun server/src/cli/accounts.ts disable person@example.com
 docker compose exec scran bun server/src/cli/accounts.ts enable person@example.com
 docker compose exec scran bun server/src/cli/accounts.ts reset-password person@example.com
 ```
+
+### First admin and the management page
+
+On a new installation, create an invite for yourself using the operator command
+above, open its link privately, and finish creating your account. Then run
+`accounts.ts make-admin` for your account's email inside the running container
+(locally: `bun run accounts make-admin you@example.com`). It requires an existing,
+enabled account; there is no automatic first-signup admin. Running it again for
+the same account is safe; appointing a different admin is refused. The role is
+attached to the account ID, not permanently configured by email.
+
+Refresh **Account** from the catalogue header; its **Administration** link opens
+`/admin`. There you can create/revoke pending invites, disable/re-enable members,
+and sign out their devices. There are no web role-changing or password-reset
+controls. All invitees become members. Members cannot access the management API;
+server permissions are checked against current database state on each request.
+The admin cannot be disabled through either the page or operator CLI. Manage your
+own sessions using Account; retain shell access for password recovery.
+
+Successful management changes are recorded in the database audit trail with the
+actor (or operator), action, target ID and time, without bearer links or passwords.
+New invite links are shown only on creation; copy them immediately. If lost,
+revoke the pending invite and create another rather than trying to retrieve it.
 
 Send each invite directly through a trusted private channel. The seven-day,
 single-use link is a bearer credential: **email binding is not mailbox

@@ -4,11 +4,12 @@ import {
   changePasswordSchema,
   PASSWORD_MIN_LENGTH,
 } from '@scran/shared';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router';
 
+import { accountOptions } from '../api/admin';
 import { authClient } from '../auth';
 import {
   Button,
@@ -37,6 +38,7 @@ async function attempt(
 export function Account() {
   const session = authClient.useSession();
   const user = session.data?.user;
+  const account = useQuery(accountOptions(user?.id ?? ''));
 
   return (
     <main className="mx-auto max-w-2xl space-y-8 px-4 pb-8">
@@ -55,6 +57,21 @@ export function Account() {
           )
         }
       />
+      {account.data?.role === 'admin' && (
+        <Section
+          title="Administration"
+          description="Manage accounts and invites for the shared cookbook."
+        >
+          <ButtonLink to="/admin" variant="secondary">
+            Administration →
+          </ButtonLink>
+        </Section>
+      )}
+      {account.isError && (
+        <Feedback tone="error">
+          Could not check administration access. Refresh to try again.
+        </Feedback>
+      )}
       <PasswordSection email={user?.email ?? ''} />
       <DevicesSection />
     </main>

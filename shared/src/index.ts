@@ -28,6 +28,10 @@ export const signUpSchema = z.object({
 
 export type SignUp = z.infer<typeof signUpSchema>;
 
+/** Admin invite creation always creates a member; no role field is accepted. */
+export const createInviteSchema = z.object({ email: z.email() }).strict();
+export type CreateInvite = z.infer<typeof createInviteSchema>;
+
 /** The account screen's password change, sent to Better Auth. */
 export const changePasswordSchema = z
   .object({

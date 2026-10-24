@@ -79,6 +79,15 @@ The middle rating. Make this again.
 **Double tick**:
 The highest rating. Good enough to cook for other people.
 
+**Member**:
+The default account role. A member can use the shared cookbook and manage their
+own account, but cannot manage other people's access.
+
+**Admin**:
+The one account explicitly appointed by the server operator to manage accounts
+and invites. Has the same recipe/comment ownership rules as a member, not extra
+content moderation powers. New signups never become admin automatically.
+
 **Invite**:
 A single-use link that permits exactly one person to create an account. The set of unredeemed
 invites *is* the list of people allowed in; there is no other way to sign up.

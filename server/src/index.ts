@@ -7,6 +7,7 @@ import { activeSession, auth, migrateAuth } from './auth';
 import { config } from './config';
 import { db, migrate } from './db';
 import { ClientError, errorHandler } from './errors';
+import { managementRoutes } from './http/admin';
 import { invites } from './http/invites';
 import { recipeRoutes } from './http/recipes';
 import {
@@ -103,7 +104,10 @@ app.all('/api/auth/sign-up/*', () => {
 app.on(['GET', 'POST'], '/api/auth/*', c => auth.handler(c.req.raw));
 
 // Chained, because this is what `hc<AppType>` reads on the client — ticket 05.
-const routes = app.route('/', invites).route('/', recipeRoutes);
+const routes = app
+  .route('/', invites)
+  .route('/', recipeRoutes)
+  .route('/', managementRoutes);
 
 // Docker starts from the repository root and ships the built client here.
 // Preserve API errors and missing-asset 404s rather than returning HTML.
@@ -117,6 +121,7 @@ app.on(
     '/capture',
     '/recipes/:id',
     '/account',
+    '/admin',
     '/ui',
   ],
   serveStatic({ path: './client/dist/index.html' }),

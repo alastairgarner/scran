@@ -18,7 +18,7 @@ import { ClientError } from '../errors';
  * closes the other half: `text/plain` is form-shaped enough to be sent
  * cross-origin, so it is rejected before anything reads the body.
  */
-const requireJson: MiddlewareHandler = async (c, next) => {
+export const requireJson: MiddlewareHandler = async (c, next) => {
   if (!c.req.header('content-type')?.startsWith('application/json')) {
     throw ClientError.validation('Send JSON.');
   }

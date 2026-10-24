@@ -41,9 +41,12 @@ describe('migrate', () => {
       '004-extraction-failure-reason.sql',
       '005-security-usage.sql',
       '006-account-security.sql',
+      '007-admin-management.sql',
     ]);
     expect(tableNames(db)).toEqual(
       expect.arrayContaining([
+        'accountAccess',
+        'managementAudit',
         'comment',
         'invite',
         'rating',

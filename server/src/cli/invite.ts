@@ -1,7 +1,7 @@
 /**
- * The only way to create an account, and deliberately a terminal command: it
- * is why `invite.createdByUserId` is nullable, since the first one is issued
- * before anybody exists to have issued it. An `/invites` page is additive.
+ * Operator invite controls, including the first invite before an admin exists.
+ * `invite.createdByUserId` is nullable for these operator-issued links. Once
+ * appointed, the admin can manage further invites through Administration.
  *
  *   bun run invite <email>       mint an invite bound to that address
  *   bun run invite list          show invites that could still be redeemed

@@ -156,18 +156,25 @@ export function createInvite(email?: string, createdByUserId?: string): string {
   // 256 bits, the same as a session token. Brute force is not a thing here.
   const token = randomBytes(32).toString('base64url');
   const now = new Date();
-  db.run(
-    `INSERT INTO invite (tokenHash, email, expiresAt, createdByUserId, createdAt, updatedAt)
-     VALUES (?, ?, ?, ?, ?, ?)`,
-    [
-      hashToken(token),
-      email ?? null,
-      new Date(now.getTime() + INVITE_LIFETIME_MS).toISOString(),
+  db.transaction(() => {
+    const result = db.run(
+      `INSERT INTO invite (tokenHash, email, expiresAt, createdByUserId, createdAt, updatedAt)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [
+        hashToken(token),
+        email ?? null,
+        new Date(now.getTime() + INVITE_LIFETIME_MS).toISOString(),
+        createdByUserId ?? null,
+        now.toISOString(),
+        now.toISOString(),
+      ],
+    );
+    auditControl(
       createdByUserId ?? null,
-      now.toISOString(),
-      now.toISOString(),
-    ],
-  );
+      'invite.create',
+      String(result.lastInsertRowid),
+    );
+  })();
   return `${config.baseUrl}/invite/${token}`;
 }
 
@@ -278,8 +285,64 @@ export async function redeemInvite(
   }
 }
 
-// Operator controls, run from the CLI by whoever holds the server's database.
-// There is no admin role: shell access to the box is the authority.
+// Management controls shared by the admin HTTP boundary and operator CLI.
+// Only the CLI exposes bootstrap and password reset; no role mutation is public.
+
+export type AccountRole = 'member' | 'admin';
+
+export function accountRole(userId: string): AccountRole {
+  return (
+    db
+      .query<{ role: AccountRole }, [string]>(
+        'SELECT role FROM accountAccess WHERE userId = ?',
+      )
+      .get(userId)?.role ?? 'member'
+  );
+}
+
+export const requireAdmin: MiddlewareHandler<AppEnv> = async (c, next) => {
+  // Never trust session/client role data: permissions are read on each request.
+  if (accountRole(c.get('user').id) !== 'admin') {
+    throw ClientError.forbidden('Administrator access required.');
+  }
+  await next();
+};
+
+function auditControl(
+  actorUserId: string | null,
+  action: string,
+  targetId: string,
+): void {
+  db.run(
+    'INSERT INTO managementAudit (actorUserId, action, targetId, createdAt) VALUES (?, ?, ?, ?)',
+    [actorUserId, action, targetId, new Date().toISOString()],
+  );
+}
+
+/** Operator-only bootstrap. The unique partial index serialises concurrent attempts. */
+export function makeAdmin(email: string): void {
+  db.transaction(() => {
+    const userId = accountId(email);
+    if (isDisabled(userId)) {
+      throw ClientError.conflict(
+        'Enable this account before making it administrator.',
+      );
+    }
+    const existing = db
+      .query<{ userId: string }, []>(
+        "SELECT userId FROM accountAccess WHERE role = 'admin'",
+      )
+      .get();
+    if (existing && existing.userId !== userId) {
+      throw ClientError.conflict('An administrator already exists.');
+    }
+    db.run(
+      "INSERT INTO accountAccess (userId, role) VALUES (?, 'admin') ON CONFLICT(userId) DO UPDATE SET role = 'admin'",
+      [userId],
+    );
+    auditControl(null, 'account.make-admin', userId);
+  }).immediate();
+}
 
 type PendingInvite = {
   id: number;
@@ -305,15 +368,23 @@ export function listInvites(): PendingInvite[] {
  *
  * @returns {boolean} Whether an unused invite with that id existed.
  */
-export function revokeInvite(id: number): boolean {
-  const now = new Date().toISOString();
-  return (
-    db.run(
-      `UPDATE invite SET revokedAt = ?, updatedAt = ?
-       WHERE id = ? AND redeemedAt IS NULL AND revokedAt IS NULL`,
-      [now, now, id],
-    ).changes > 0
-  );
+export function revokeInvite(
+  id: number,
+  actorUserId: string | null = null,
+): boolean {
+  return db.transaction(() => {
+    const now = new Date().toISOString();
+    const changed =
+      db.run(
+        `UPDATE invite SET revokedAt = ?, updatedAt = ?
+       WHERE id = ? AND redeemedAt IS NULL AND revokedAt IS NULL AND expiresAt > ?`,
+        [now, now, id, now],
+      ).changes > 0;
+    if (changed) {
+      auditControl(actorUserId, 'invite.revoke', String(id));
+    }
+    return changed;
+  })();
 }
 
 type Account = {
@@ -322,14 +393,17 @@ type Account = {
   email: string;
   createdAt: string;
   disabledAt: string | null;
+  role: AccountRole;
 };
 
 /** @returns {Account[]} Every account, disabled ones included. */
 export function listAccounts(): Account[] {
   return db
     .query<Account, []>(
-      `SELECT u.id, u.name, u.email, u.createdAt, d.disabledAt
+      `SELECT u.id, u.name, u.email, u.createdAt, d.disabledAt,
+              COALESCE(a.role, 'member') AS role
        FROM "user" u LEFT JOIN disabledAccount d ON d.userId = u.id
+       LEFT JOIN accountAccess a ON a.userId = u.id
        ORDER BY u.createdAt`,
     )
     .all();
@@ -338,8 +412,10 @@ export function listAccounts(): Account[] {
 /** @throws {ClientError} 404 when no account has that address. */
 function accountId(email: string): string {
   const row = db
-    .query<{ id: string }, [string]>('SELECT id FROM "user" WHERE email = ?')
-    .get(email.toLowerCase());
+    .query<{ id: string }, [string]>(
+      'SELECT id FROM "user" WHERE email = ? COLLATE NOCASE',
+    )
+    .get(email.trim());
   if (!row) {
     throw ClientError.notFound(`No account for ${email}.`);
   }
@@ -351,18 +427,72 @@ function accountId(email: string): string {
  * recipes and versions they wrote keep their attribution. The flag goes in
  * first. A SQLite trigger also rejects a racing INSERT from another process.
  */
+function requireAccount(userId: string): void {
+  if (!db.query('SELECT 1 FROM "user" WHERE id = ?').get(userId)) {
+    throw ClientError.notFound('Account not found.');
+  }
+}
+
+export async function disableAccountById(
+  userId: string,
+  actorUserId: string | null = null,
+): Promise<void> {
+  db.transaction(() => {
+    requireAccount(userId);
+    if (accountRole(userId) === 'admin') {
+      throw ClientError.conflict('The administrator cannot be disabled.');
+    }
+    db.run(
+      'INSERT OR IGNORE INTO disabledAccount (userId, disabledAt) VALUES (?, ?)',
+      [userId, new Date().toISOString()],
+    );
+    deleteAccountSessions(userId);
+    auditControl(actorUserId, 'account.disable', userId);
+  }).immediate();
+}
+
 export async function disableAccount(email: string): Promise<void> {
-  const userId = accountId(email);
-  db.run(
-    'INSERT OR IGNORE INTO disabledAccount (userId, disabledAt) VALUES (?, ?)',
-    [userId, new Date().toISOString()],
-  );
-  await (await auth.$context).internalAdapter.deleteUserSessions(userId);
+  await disableAccountById(accountId(email));
 }
 
 /** Lets a disabled account sign in again. Its old sessions stay gone. */
+export function enableAccountById(
+  userId: string,
+  actorUserId: string | null = null,
+): void {
+  db.transaction(() => {
+    requireAccount(userId);
+    // Also purge any survivors from an interrupted older operator command.
+    deleteAccountSessions(userId);
+    db.run('DELETE FROM disabledAccount WHERE userId = ?', [userId]);
+    auditControl(actorUserId, 'account.enable', userId);
+  })();
+}
+
 export function enableAccount(email: string): void {
-  db.run('DELETE FROM disabledAccount WHERE userId = ?', [accountId(email)]);
+  enableAccountById(accountId(email));
+}
+
+export async function revokeAccountSessions(
+  userId: string,
+  actorUserId: string | null = null,
+): Promise<void> {
+  db.transaction(() => {
+    requireAccount(userId);
+    deleteAccountSessions(userId);
+    auditControl(actorUserId, 'account.revoke-sessions', userId);
+  }).immediate();
+}
+
+/**
+ * These security writes deliberately stay synchronous at the auth boundary:
+ * Better Auth's async adapter cannot join our Bun SQLite transaction. With our
+ * single SQLite store (no cookie cache/secondary sessions), touching its rows
+ * here makes access changes and their audit commit or roll back together.
+ * Better Auth still owns table migrations and password hashing.
+ */
+function deleteAccountSessions(userId: string): void {
+  db.run('DELETE FROM session WHERE userId = ?', [userId]);
 }
 
 /**
@@ -383,10 +513,17 @@ export async function resetPassword(email: string): Promise<string> {
   }
   // 96 bits, base64url: 16 characters, over the floor and easy to read out.
   const password = randomBytes(12).toString('base64url');
-  await context.internalAdapter.updatePassword(
-    userId,
-    await context.password.hash(password),
-  );
-  await context.internalAdapter.deleteUserSessions(userId);
+  const hashed = await context.password.hash(password);
+  db.transaction(() => {
+    const result = db.run(
+      "UPDATE account SET password = ?, updatedAt = ? WHERE userId = ? AND providerId = 'credential'",
+      [hashed, new Date().toISOString(), userId],
+    );
+    if (result.changes === 0) {
+      throw ClientError.notFound(`${email} has no password to reset.`);
+    }
+    deleteAccountSessions(userId);
+    auditControl(null, 'account.reset-password', userId);
+  }).immediate();
   return password;
 }

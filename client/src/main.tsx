@@ -4,6 +4,7 @@ import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Route, Routes } from 'react-router';
 
 import { Account } from './screens/account';
+import { Administration } from './screens/admin';
 import { Invite, RequireAuth, SignIn } from './screens/auth';
 import { Capture } from './screens/capture';
 import { Catalogue } from './screens/catalogue';
@@ -38,6 +39,14 @@ createRoot(rootEl).render(
             }
           />
           <Route path="/invite/:token" element={<Invite />} />
+          <Route
+            path="/admin"
+            element={
+              <Protected>
+                <Administration />
+              </Protected>
+            }
+          />
           <Route
             path="/account"
             element={
