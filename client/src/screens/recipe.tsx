@@ -16,6 +16,7 @@ import {
 import { authClient } from '../auth';
 import { IngredientsPanel } from '../ingredients-panel';
 import { RecipeMenu } from '../recipe-menu';
+import { RecipeSources } from '../recipe-sources';
 import {
   Button,
   ButtonLink,
@@ -118,27 +119,7 @@ export function Recipe() {
             ? 'Try a clear photo of a recipe page showing the ingredients or method. A photo of a dish on its own isn’t enough.'
             : 'Something went wrong while reading the source. It’s saved, so you can try again.'}
         </p>
-        <div className="flex flex-wrap justify-center gap-3">
-          {recipe.data.sources.map((source, index) =>
-            source.kind === 'photo' ? (
-              <a key={source.id} href={`/api/photos/${source.id}`}>
-                <img
-                  src={`/api/photos/${source.id}`}
-                  alt={`Source photo ${index + 1}`}
-                  className="rounded-ui border-line h-40 w-40 border object-contain"
-                />
-              </a>
-            ) : (
-              <a
-                key={source.id}
-                href={source.url ?? '#'}
-                className="text-accent underline"
-              >
-                View original webpage
-              </a>
-            ),
-          )}
-        </div>
+        <RecipeSources sources={recipe.data.sources} failed />
         <div className="flex flex-wrap items-center justify-center gap-3">
           <ButtonLink to="/capture">Try another source</ButtonLink>
           <Button
@@ -394,27 +375,7 @@ export function Recipe() {
 
         {recipe.data.sources.length > 0 && (
           <Section title="Source" reading>
-            <div className="flex flex-wrap gap-3">
-              {recipe.data.sources.map((source, index) =>
-                source.kind === 'photo' ? (
-                  <a key={source.id} href={`/api/photos/${source.id}`}>
-                    <img
-                      src={`/api/photos/${source.id}`}
-                      alt={`Source photo ${index + 1}`}
-                      className="rounded-ui border-line h-28 w-24 border object-contain opacity-70"
-                    />
-                  </a>
-                ) : (
-                  <a
-                    key={source.id}
-                    href={source.url ?? '#'}
-                    className="text-accent underline"
-                  >
-                    Original webpage
-                  </a>
-                ),
-              )}
-            </div>
+            <RecipeSources sources={recipe.data.sources} />
           </Section>
         )}
       </article>
