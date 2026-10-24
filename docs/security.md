@@ -82,6 +82,23 @@ originals and deserve the same protection as the running database.
 
 ## Public VPS checklist
 
+The containerized Caddy stack in [the VPS guide](vps.md) uses
+`compose.vps.yaml`, exposes only Caddy's 80/443, derives the HTTPS origin from
+`SCRAN_HOST`, and overwrites `X-Real-IP` with Caddy's resolved client IP. It
+trusts Cloudflare's `CF-Connecting-IP` only from the published Cloudflare
+networks pinned in `deploy/vps.Caddyfile`; review that list periodically. Direct
+connections cannot supply their own trusted visitor IP. Use `docker compose -f
+compose.vps.yaml` for the operator commands above when running that stack.
+
+For automatic deployment via Hostinger's API, see [the Hostinger guide](hostinger.md).
+Its standalone image-only manifest uses fixed VPS data paths and GitHub environment
+secrets sent to Docker Manager on every deploy; missing required secrets fail
+deployment. It takes bounded
+local pre-release backups before Bun starts. Off-host backups remain an operator
+responsibility.
+
+The checklist below describes the alternative **host-installed Caddy** setup:
+
 1. Choose a hostname and point its DNS at the VPS. Set `BASE_URL` in `.env` to
    that exact HTTPS origin (no path/trailing slash). Compose defaults to the
    existing home hostname; changing it does not change DNS or Caddy for you.

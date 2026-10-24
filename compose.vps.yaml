@@ -1,0 +1,66 @@
+# Standalone VPS stack; do not combine with compose.yaml using -f overrides.
+# Requires Docker Compose >= 2.24.0 for !reset.
+name: scran-vps
+
+services:
+  scran:
+    # Reuse the app's healthcheck, limits, hardening and persistent data mount.
+    extends:
+      file: compose.yaml
+      service: scran
+    image: ${SCRAN_IMAGE:-scran-vps-app}
+    # Only Caddy can reach the app; no public or loopback host port is needed.
+    ports: !reset []
+    environment:
+      BASE_URL: https://${SCRAN_HOST:-recipes.alastair.sh}
+      AUTH_IP_HEADER: x-real-ip
+
+  caddy:
+    # Update this digest deliberately alongside dependency/security checks.
+    image: caddy:2-alpine@sha256:eb4d35b7452d1ab6171fbdbe8d9275b2301dad6dad92115d91e19fb9b24d510f
+    restart: unless-stopped
+    read_only: true
+    cap_drop: [ALL]
+    cap_add: [NET_BIND_SERVICE]
+    security_opt: [no-new-privileges:true]
+    tmpfs:
+      - /tmp:size=16m,mode=1777
+    mem_limit: 256m
+    cpus: 0.5
+    pids_limit: 128
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '3'
+    depends_on:
+      scran:
+        condition: service_healthy
+    ports:
+      - '80:80'
+      - '443:443'
+    environment:
+      SCRAN_HOST: ${SCRAN_HOST:-recipes.alastair.sh}
+    volumes:
+      - ./deploy/vps.Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    healthcheck:
+      # Admin API remains loopback-only inside the container; never publish 2019.
+      test:
+        [
+          'CMD',
+          'wget',
+          '-q',
+          '-O',
+          '/dev/null',
+          'http://127.0.0.1:2019/config/',
+        ]
+      interval: 30s
+      timeout: 5s
+      start_period: 15s
+      retries: 3
+
+volumes:
+  caddy_data:
+  caddy_config:

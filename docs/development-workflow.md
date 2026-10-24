@@ -3,7 +3,9 @@
 Each agent works on its own branch in its own Git worktree. Each worktree gets
 an isolated Docker preview with synthetic data. After merging, an agent explicitly
 deploys `origin/main` to the shared instance at https://scran.hp.affablegecko.net.
-There is no polling, webhook, or automatic deployment.
+This home-server deployment is manual. The optional
+[Hostinger workflow](hostinger.md) automatically deploys main to the public VPS
+once configured; worktree previews remain isolated and unchanged.
 
 ## Start work
 
@@ -81,8 +83,8 @@ not merely a successful health response.
 
 ## Check and merge
 
-The agent runs validation locally before committing and merging. There is no
-GitHub Actions workflow.
+The agent runs validation locally before committing and merging; CI does not
+replace local validation.
 
 Before committing:
 
@@ -92,6 +94,10 @@ bun test
 ```
 
 Validate the affected flow in the Docker preview and commit the worktree branch.
+GitHub Actions also runs these checks for pull requests and pushes to main.
+Hostinger image publishing/deployment stays disabled until the repository-level
+`HOSTINGER_VM_ID` variable is set; see the provider guide before enabling it.
+
 Development and preview testing can run in parallel, but designate one agent at a
 time to handle the entire merge, push, and deployment sequence. Other agents keep
 working in their own worktrees and wait before integrating their branches.

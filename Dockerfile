@@ -23,6 +23,8 @@ COPY --from=build /app/server ./server
 COPY --from=build /app/shared ./shared
 COPY --from=build /app/client/dist ./client/dist
 COPY --from=build /app/package.json ./
+# Used only by compose.hostinger.yaml; preserve the home/preview startup command.
+COPY --chmod=0444 deploy/start-hostinger.sh ./start-hostinger.sh
 USER bun
 EXPOSE 3000
 CMD ["bun", "server/src/index.ts"]

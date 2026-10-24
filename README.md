@@ -49,6 +49,15 @@ previews, seeded test accounts, validation, and explicit deployment after mergin
 - `client/` — Vite + React
 - `tasks/` — issues and specs
 
+## Public VPS
+
+For the two-container Docker Compose stack (Scran + Caddy) at
+`https://recipes.alastair.sh`, follow [the VPS setup guide](docs/vps.md).
+SQLite runs inside the app process; no separate frontend or database container
+is needed. For automatic deployment on pushes to main using Hostinger's API,
+follow [the Hostinger deployment guide](docs/hostinger.md). Both options are
+separate from the home-server deployment below.
+
 ## Home server
 
 `compose.yaml` runs the built frontend and API in one container, published only

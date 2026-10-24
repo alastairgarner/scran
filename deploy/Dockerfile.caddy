@@ -1,0 +1,4 @@
+# Ship the proxy configuration in an immutable image: Docker Manager only needs
+# the standalone Compose file, not a checkout or relative configuration mounts.
+FROM caddy:2-alpine@sha256:eb4d35b7452d1ab6171fbdbe8d9275b2301dad6dad92115d91e19fb9b24d510f
+COPY --chmod=0444 deploy/vps.Caddyfile /etc/caddy/Caddyfile
