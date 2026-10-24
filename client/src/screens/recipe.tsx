@@ -17,6 +17,7 @@ import { authClient } from '../auth';
 import { IngredientsPanel } from '../ingredients-panel';
 import { RecipeMenu } from '../recipe-menu';
 import { RecipeSources } from '../recipe-sources';
+import { ScreenAwakeToggle } from '../screen-awake-toggle';
 import {
   Button,
   ButtonLink,
@@ -180,21 +181,24 @@ export function Recipe() {
           <ButtonLink to="/" variant="quiet" size="compact">
             ← All recipes
           </ButtonLink>
-          <RecipeMenu
-            disabled={
-              recipe.data.status === 'pending' ||
-              remove.isPending ||
-              readAgain.isPending
-            }
-            canRead={recipe.data.sources.length > 0}
-            onEdit={() => setAction('edit')}
-            onRead={() => setAction('reread')}
-            onDelete={
-              recipe.data.createdByUserId === session.data?.user.id
-                ? () => setAction('delete')
-                : null
-            }
-          />
+          <div className="flex items-center gap-1">
+            <ScreenAwakeToggle />
+            <RecipeMenu
+              disabled={
+                recipe.data.status === 'pending' ||
+                remove.isPending ||
+                readAgain.isPending
+              }
+              canRead={recipe.data.sources.length > 0}
+              onEdit={() => setAction('edit')}
+              onRead={() => setAction('reread')}
+              onDelete={
+                recipe.data.createdByUserId === session.data?.user.id
+                  ? () => setAction('delete')
+                  : null
+              }
+            />
+          </div>
         </div>
         <Dialog
           open={action === 'delete' || action === 'reread'}
