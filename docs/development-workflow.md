@@ -1,11 +1,15 @@
 # Parallel development and deployment
 
 Each agent works on its own branch in its own Git worktree. Each worktree gets
-an isolated Docker preview with synthetic data. After merging, an agent explicitly
-deploys `origin/main` to the shared instance at https://scran.hp.affablegecko.net.
-This home-server deployment is manual. The optional
-[Hostinger workflow](hostinger.md) automatically deploys main to the public VPS
-once configured; worktree previews remain isolated and unchanged.
+an isolated Docker preview with synthetic data. Pushing `main` to GitHub
+**automatically deploys production** at https://recipes.alastair.sh through the
+[Hostinger workflow](hostinger.md). This is the current, configured deployment
+path; worktree previews remain isolated and unchanged.
+
+Do not publish a shared local instance for validation. The home-server deployment
+at `scran.hp.affablegecko.net` is retired. Do not run `bun run deploy`,
+`scripts/deploy.sh`, or the root `compose.yaml` unless explicitly asked to restore
+that legacy installation. Use `bun run preview:up` for validation.
 
 ## Start work
 
@@ -100,8 +104,9 @@ bun test
 
 Validate the affected flow in the Docker preview and commit the worktree branch.
 GitHub Actions also runs these checks for pull requests and pushes to main.
-Hostinger image publishing/deployment stays disabled until the repository-level
-`HOSTINGER_VM_ID` variable is set; see the provider guide before enabling it.
+The Hostinger workflow is enabled: every push to `main` can replace production.
+At this early stage, production breakage is an accepted development risk, not a
+reason to deploy a separate shared home-server instance.
 
 Development and preview testing can run in parallel, but designate one agent at a
 time to handle the entire merge, push, and deployment sequence. Other agents keep
@@ -113,8 +118,10 @@ The designated agent:
 2. Merges the committed feature branch into local `main`, resolving conflicts.
 3. Runs `bun run check` and `bun test` on the combined result, and repeats affected
    UI validation when intervening changes could affect the feature.
-4. Pushes `main` to `origin`, then runs `bun run deploy` and verifies success before
-   handing integration to the next agent.
+4. Pushes `main` to `origin`, triggering production deployment. Checks the
+   **Verify and deploy to Hostinger** workflow for that commit and verifies it
+   succeeds before handing integration to the next agent. Report failures; do not
+   substitute a local deployment.
 
 Use a clean checkout for merging; do not switch the primary checkout while it
 contains another agent's uncommitted work. If a merge or check fails, resolve it
@@ -122,50 +129,29 @@ before pushing. If the remote rejects the push because main advanced, fetch and
 integrate those changes, then rerun validation; never force-push main.
 
 Merging is local Git work; GitHub CLI and pull requests are not required. The
-one-agent-at-a-time rule is coordinated manually. The deployment lock protects
-container replacement, not Git merges or pushes.
+one-agent-at-a-time rule is coordinated manually. GitHub Actions serializes
+production deployments; that does not coordinate local Git merges or pushes.
 
 Database migrations must have unique filenames and should remain compatible with
 the previous app version where possible.
 
 ## Deploy merged changes
 
-After a successful merge, from any worktree on this host:
+After validating and merging, push `main`:
 
 ```sh
-bun run deploy --prepare  # Optional: check and build without replacing anything
-bun run deploy
+git push origin main
+gh run list --workflow hostinger.yaml --branch main --limit 5
+gh run watch <run-id> --exit-status
 ```
 
-The deployment command:
+Choose the run matching the pushed commit. The workflow builds immutable images,
+deploys through Hostinger Docker Manager, verifies both running image digests and
+container health, and checks public HTTPS `/api/health`. A push is not a confirmed
+deployment until its workflow succeeds. See [the Hostinger guide](hostinger.md)
+for configuration, diagnosis, backups and recovery.
 
-1. Takes one shared deployment lock across all worktrees; exits if already held.
-2. Fetches `origin/main` into a dedicated clone under the primary checkout's
-   `.scratch/deployment/checkout` and checks out its exact commit.
-3. Installs locked dependencies, runs `bun run check` and `bun test`, then builds
-   a Docker image tagged `scran-deploy:<commit SHA>`.
-4. Stops the shared container and backs up the entire primary checkout's `data`
-   directory under `backups/`. If the backup fails, it restarts the old container.
-5. Replaces the shared container, waits for health, and prints the deployed SHA.
-
-Keep the primary checkout in place: its `.env`, `data`, `backups`, and deployment
-state are shared infrastructure, independent of agent worktrees. Only its `.env`
-is used for deployment secrets. The existing Compose project name `scran`, port
-`3080`, Caddy route, and household data directory are preserved. No agent branch
-or uncommitted change is deployed. Deploying requires Git access to the remote.
-Each invocation deploys the main commit it fetched; a later merge needs another
-invocation.
-
-The first deployment of this tooling requires these files to be merged into
-`origin/main`. `--prepare` does all checks and the image build but never stops or
-replaces the shared container or changes its data.
-
-There is brief downtime during backup and replacement. Startup applies database
-migrations automatically. On failure after replacement begins, inspect logs and
-migrations before rolling back: an old image may not understand the new schema.
-The prior image ID is recorded in `.scratch/deployment/previous-image`, the last
-successful SHA in `.scratch/deployment/deployed-sha`, and each pre-deploy data
-backup includes its target SHA. Keep the failed data directory before restoring a
-backup with the service stopped, using the restore procedure in the README.
-Backups and old images are retained; remove obsolete ones deliberately. These
-local backups do not replace off-machine backups.
+No local Docker deployment or manual `bun run deploy` step is required. Local
+Docker is for isolated, seeded worktree previews only. The retired home-server
+container and its local data/backups have been removed; do not recreate them as
+part of validation or deployment. Production data/backups live on the VPS.

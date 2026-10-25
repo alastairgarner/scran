@@ -1,14 +1,20 @@
 # Automatic Hostinger deployment
 
-`.github/workflows/hostinger.yaml` verifies PRs and main. Once explicitly enabled,
-pushes to main build immutable app/proxy images in GitHub Container Registry
+This is the current production deployment at https://recipes.alastair.sh.
+The workflow is configured and enabled: **push `main` to GitHub to deploy** and
+verify the matching Actions run succeeds. No local Docker deployment is needed.
+
+`.github/workflows/hostinger.yaml` verifies PRs and main. Pushes to main build
+immutable app/proxy images in GitHub Container Registry
 (GHCR) and deploy `compose.hostinger.yaml` using Hostinger's Docker Manager API.
 No inbound SSH from GitHub, Tailscale or self-hosted runner is needed.
 
-This is an alternative to the manual [VPS stack](vps.md). Home-server deployment
-and `bun run preview:up` / `preview:down` are unchanged. Don't run both public
-stacks against the same data or ports. Nothing is deployed just by adding these
-files to a worktree; they must be merged/pushed and configured below.
+The manual [VPS stack](vps.md) is an alternative installation, not the current
+release process. The home-server instance is retired; do not run `bun run deploy`
+or the root `compose.yaml`. Use isolated `bun run preview:up` previews for local
+validation and `bun run preview:reset` afterwards. Don't run both public stacks
+against the same data or ports. The setup sections below document provisioning
+and recovery; routine deployment needs only a validated push to main.
 
 ## What the workflow does
 

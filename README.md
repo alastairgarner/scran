@@ -41,7 +41,7 @@ and retries use a copy with camera orientation and your selected rotation applie
 ## Parallel development
 
 See [the development workflow](docs/development-workflow.md) for isolated worktree
-previews, seeded test accounts, validation, and explicit deployment after merging.
+previews, seeded test accounts, validation, and automatic deployment on pushes to main.
 
 ## Layout
 
@@ -49,60 +49,23 @@ previews, seeded test accounts, validation, and explicit deployment after mergin
 - `client/` — Vite + React
 - `tasks/` — issues and specs
 
-## Public VPS
+## Production deployment
 
-For the two-container Docker Compose stack (Scran + Caddy) at
-`https://recipes.alastair.sh`, follow [the VPS setup guide](docs/vps.md).
-SQLite runs inside the app process; no separate frontend or database container
-is needed. For automatic deployment on pushes to main using Hostinger's API,
-follow [the Hostinger deployment guide](docs/hostinger.md). Both options are
-separate from the home-server deployment below.
+Production is https://recipes.alastair.sh on Hostinger. **Push `main` to GitHub
+to deploy**: `.github/workflows/hostinger.yaml` validates, builds and deploys the
+release automatically. Verify that commit's **Verify and deploy to Hostinger**
+workflow succeeds; no local deployment command is needed.
 
-## Home server
+See [the Hostinger deployment guide](docs/hostinger.md) for configuration,
+operator commands, backups and recovery. The [manual VPS guide](docs/vps.md)
+describes an alternative installation, not the current deployment process.
 
-`compose.yaml` runs the built frontend and API in one container, published only
-on `127.0.0.1:3080`. The host's Caddy serves
-`https://scran.hp.affablegecko.net` over Tailscale. DNS must point that hostname
-at `100.90.71.107` without Cloudflare proxying.
+## Local validation
 
-Set `OPENAI_API_KEY` and a random `AUTH_SECRET` (at least 32 characters) in `.env`,
-then run:
+Use `bun run preview:up` in your worktree for an isolated seeded Docker preview,
+then `bun run preview:reset` after validation. See the development workflow above.
 
-```sh
-# For an existing root-owned data directory, see docs/security.md first.
-docker compose up -d --build --wait
-docker compose exec scran bun server/src/cli/invite.ts you@example.com
-```
-
-The Compose configuration sets the HTTPS origin and secure cookies. The image
-does not contain `.env` or recipe data. Extraction defaults to `gpt-4.1` with
-`temperature: 0`, matching the recorded extraction experiments. Any model override
-must support that sampling setting. On this host, install the Caddy route once:
-
-```sh
-sudo sh deploy/install-caddy.sh
-```
-
-This installs or updates Scran's route, validates the combined configuration,
-preserves a backup, and reloads the existing Caddy service. It reuses the existing `cloudflare_tls` snippet.
-
-Docker is enabled at boot on the home server; `restart: unless-stopped` brings
-Scran back after restarts unless it was explicitly stopped. Inspect it with
-`docker compose ps` and `docker compose logs --tail=100 scran`.
-
-All persistent state lives in `./data`: `scran.db`, SQLite's WAL/SHM sidecars, and
-`sources/`. Mounting the whole directory keeps them together across container
-replacement. The `:Z` mount option supports this host's SELinux configuration.
-
-For a consistent manual backup, stop writes while copying the whole directory:
-
-```sh
-mkdir -p backups
-docker compose stop scran
-tar -czf "backups/scran-$(date +%Y%m%d-%H%M%S).tar.gz" data
-docker compose start scran
-```
-
-Keep a separate secure copy of `.env`. To restore, stop Scran, preserve the
-current `data` directory, unpack the backup into the repository root, and start
-Scran again. Automated and off-machine backups are not configured here.
+The home-server instance at `scran.hp.affablegecko.net` is retired; its container,
+local data and backups have been removed. Do not run the legacy `bun run deploy`,
+`scripts/deploy.sh`, root `compose.yaml`, or `deploy/install-caddy.sh` for normal
+validation or deployment. These files remain historical tooling only.

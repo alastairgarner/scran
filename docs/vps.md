@@ -1,5 +1,9 @@
 # Public VPS: Scran + Caddy
 
+This guide describes an alternative **manual installation**. Current production
+uses [automatic Hostinger deployment](hostinger.md): push `main` to GitHub and
+verify the workflow succeeds. Do not run this manual stack alongside production.
+
 This is the Hostinger (or other Linux VPS) deployment for
 `https://recipes.alastair.sh`. It runs **two containers**:
 
@@ -17,7 +21,8 @@ volumes; deleting the app data directory loses household data.
 
 This is a standalone stack: always use `docker compose -f compose.vps.yaml`.
 Do not combine it with `compose.yaml` using multiple `-f` arguments. The latter,
-`bun run deploy`, and `deploy/install-caddy.sh` still target the home server.
+`bun run deploy`, and `deploy/install-caddy.sh` target the **retired** home server;
+do not use them for validation or production deployment.
 For GitHub-triggered deployment through Docker Manager instead, follow
 [the Hostinger guide](hostinger.md). That uses a separate image-only manifest;
 don't run both stacks against the same data or ports.

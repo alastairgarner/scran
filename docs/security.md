@@ -124,7 +124,10 @@ deployment. It takes bounded
 local pre-release backups before Bun starts. Off-host backups remain an operator
 responsibility.
 
-The checklist below describes the alternative **host-installed Caddy** setup:
+The checklist below is reference for an alternative **host-installed Caddy**
+setup, not current production. The home-server instance is retired; do not
+recreate it for validation. Current production deploys automatically on pushes
+to `main` through [Hostinger](hostinger.md).
 
 1. Choose a hostname and point its DNS at the VPS. Set `BASE_URL` in `.env` to
    that exact HTTPS origin (no path/trailing slash). Compose defaults to the
@@ -167,5 +170,5 @@ The checklist below describes the alternative **host-installed Caddy** setup:
    cannot know the VPS's own public service addresses.
 
 Public provisioning, DNS changes, off-host backups, and provider billing settings
-are separate operational steps. The existing deployment remains on Tailscale
-unless those steps are explicitly carried out.
+are separate operational steps. Current production is the public Hostinger
+installation; the former Tailscale home-server app has been retired.
