@@ -16,6 +16,29 @@ export function needsViewportFallback({
   return searchFocused && scale === 1 && layoutHeight - visualHeight > 1;
 }
 
+export function catalogueBottomInset({
+  layoutHeight,
+  visualHeight,
+  visualOffsetTop,
+  scale,
+  searchFocused,
+}: {
+  layoutHeight: number;
+  visualHeight: number;
+  visualOffsetTop: number;
+  scale: number;
+  searchFocused: boolean;
+}): number {
+  return needsViewportFallback({
+    layoutHeight,
+    visualHeight,
+    scale,
+    searchFocused,
+  })
+    ? Math.max(0, layoutHeight - visualHeight - visualOffsetTop)
+    : 0;
+}
+
 export function useCatalogueViewport() {
   const ref = useRef<HTMLElement>(null);
 
@@ -28,19 +51,14 @@ export function useCatalogueViewport() {
     const sync = () => {
       // Prefer native CSS sizing. Safari ignores interactive-widget, so only
       // compensate when a focused search has a smaller, unzoomed visual viewport.
-      const fallback = needsViewportFallback({
+      const bottom = catalogueBottomInset({
         layoutHeight: window.innerHeight,
         visualHeight: viewport.height,
+        visualOffsetTop: viewport.offsetTop,
         scale: viewport.scale,
         searchFocused: Boolean(element.querySelector('input:focus')),
       });
-      if (fallback) {
-        element.style.setProperty('--catalogue-height', `${viewport.height}px`);
-        element.style.setProperty('--catalogue-top', `${viewport.offsetTop}px`);
-      } else {
-        element.style.removeProperty('--catalogue-height');
-        element.style.removeProperty('--catalogue-top');
-      }
+      element.style.setProperty('--catalogue-bottom', `${bottom}px`);
     };
     sync();
     viewport.addEventListener('resize', sync);
