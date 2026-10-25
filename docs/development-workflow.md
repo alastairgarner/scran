@@ -71,7 +71,12 @@ bun run preview:down   # Remove the container, preserve data
 bun run preview:reset  # Remove this preview's container AND data
 ```
 
-Run `preview:reset` before deleting a worktree to avoid orphaned Docker volumes.
+After validation, run `bun run preview:reset` from your own worktree to remove
+its container and test data, including when work fails or is abandoned. The next
+`preview:up` recreates a fresh seeded database. Keep a preview only if the user
+explicitly requests it for review; report its URL and the cleanup command to run
+from that worktree. Never clean up another agent's previews. Always reset before
+deleting a worktree to avoid orphaned Docker volumes.
 The commands lock per worktree, so two agents cannot rebuild the same preview
 simultaneously. Different worktrees can build and run concurrently.
 

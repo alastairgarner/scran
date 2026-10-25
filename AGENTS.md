@@ -18,6 +18,11 @@ for an isolated seeded UI; deploy merged `origin/main` with `bun run deploy`.
 Develop and test in parallel, but coordinate one agent at a time to merge locally,
 validate the combined result, push main, and deploy.
 
+After validation, run `bun run preview:reset` from your own worktree to remove
+its preview container and test database, including when work fails or is abandoned.
+Keep a preview only if the user explicitly requests it for review; report its URL
+and cleanup command. Never clean up another agent's previews.
+
 ## UI direction
 
 Shared components and usage: [docs/ui.md](docs/ui.md). Live examples: `/ui`
