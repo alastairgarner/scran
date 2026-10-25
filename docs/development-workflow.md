@@ -7,9 +7,10 @@ an isolated Docker preview with synthetic data. Pushing `main` to GitHub
 path; worktree previews remain isolated and unchanged.
 
 Do not publish a shared local instance for validation. The home-server deployment
-at `scran.hp.affablegecko.net` is retired. Do not run `bun run deploy`,
-`scripts/deploy.sh`, or the root `compose.yaml` unless explicitly asked to restore
-that legacy installation. Use `bun run preview:up` for validation.
+at `scran.hp.affablegecko.net` is retired, and the obsolete local deploy
+command/script have been removed. Do not run the root `compose.yaml` unless
+explicitly asked to restore that legacy installation. Use `bun run preview:up`
+for validation.
 
 ## Start work
 
@@ -151,7 +152,7 @@ container health, and checks public HTTPS `/api/health`. A push is not a confirm
 deployment until its workflow succeeds. See [the Hostinger guide](hostinger.md)
 for configuration, diagnosis, backups and recovery.
 
-No local Docker deployment or manual `bun run deploy` step is required. Local
+There is no local deployment command or manual Docker deployment step. Local
 Docker is for isolated, seeded worktree previews only. The retired home-server
 container and its local data/backups have been removed; do not recreate them as
 part of validation or deployment. Production data/backups live on the VPS.

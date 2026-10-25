@@ -10,8 +10,9 @@ immutable app/proxy images in GitHub Container Registry
 No inbound SSH from GitHub, Tailscale or self-hosted runner is needed.
 
 The manual [VPS stack](vps.md) is an alternative installation, not the current
-release process. The home-server instance is retired; do not run `bun run deploy`
-or the root `compose.yaml`. Use isolated `bun run preview:up` previews for local
+release process. The home-server instance is retired and its local deploy
+command/script have been removed; do not run the root `compose.yaml`.
+Use isolated `bun run preview:up` previews for local
 validation and `bun run preview:reset` afterwards. Don't run both public stacks
 against the same data or ports. The setup sections below document provisioning
 and recovery; routine deployment needs only a validated push to main.

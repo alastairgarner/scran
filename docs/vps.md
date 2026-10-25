@@ -20,9 +20,10 @@ Container replacements preserve these. **Never run `down -v`** or prune these
 volumes; deleting the app data directory loses household data.
 
 This is a standalone stack: always use `docker compose -f compose.vps.yaml`.
-Do not combine it with `compose.yaml` using multiple `-f` arguments. The latter,
-`bun run deploy`, and `deploy/install-caddy.sh` target the **retired** home server;
-do not use them for validation or production deployment.
+Do not combine it with `compose.yaml` using multiple `-f` arguments. The latter
+and `deploy/install-caddy.sh` target the **retired** home server; do not use them
+for validation or production deployment. The obsolete local deploy command/script
+have been removed.
 For GitHub-triggered deployment through Docker Manager instead, follow
 [the Hostinger guide](hostinger.md). That uses a separate image-only manifest;
 don't run both stacks against the same data or ports.

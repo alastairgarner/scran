@@ -18,8 +18,7 @@
     "preview:url": "bash scripts/preview.sh url",
     "preview:logs": "bash scripts/preview.sh logs",
     "preview:down": "bash scripts/preview.sh down",
-    "preview:reset": "bash scripts/preview.sh reset",
-    "deploy": "bash scripts/deploy.sh"
+    "preview:reset": "bash scripts/preview.sh reset"
   },
   "devDependencies": {
     "oxfmt": "0.67.0",

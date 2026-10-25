@@ -18,8 +18,9 @@ for an isolated seeded UI. Pushing `main` to GitHub automatically deploys produc
 at https://recipes.alastair.sh through the Hostinger GitHub Actions workflow.
 Develop and test in parallel, but coordinate one agent at a time to merge locally,
 validate the combined result, push main, and verify the workflow succeeds.
-Do not run `bun run deploy`, `scripts/deploy.sh`, or the root `compose.yaml`:
-these target the retired home-server instance at `scran.hp.affablegecko.net`.
+The obsolete local deploy command/script have been removed. Do not run the root
+`compose.yaml`: it targets the retired home-server instance at
+`scran.hp.affablegecko.net`.
 Validation must use isolated worktree previews, never a shared local deployment.
 
 After validation, run `bun run preview:reset` from your own worktree to remove

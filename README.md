@@ -66,6 +66,6 @@ Use `bun run preview:up` in your worktree for an isolated seeded Docker preview,
 then `bun run preview:reset` after validation. See the development workflow above.
 
 The home-server instance at `scran.hp.affablegecko.net` is retired; its container,
-local data and backups have been removed. Do not run the legacy `bun run deploy`,
-`scripts/deploy.sh`, root `compose.yaml`, or `deploy/install-caddy.sh` for normal
-validation or deployment. These files remain historical tooling only.
+local data and backups have been removed, along with the obsolete local deploy
+command/script. The root `compose.yaml` and `deploy/install-caddy.sh` remain
+historical tooling only; do not use them for normal validation or deployment.
