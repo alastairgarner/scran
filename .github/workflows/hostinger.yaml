@@ -54,23 +54,32 @@ jobs:
     if: github.event_name != 'workflow_dispatch' || !inputs.diagnose
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    outputs:
+      deploy_required: ${{ steps.changes.outputs.deploy_required }}
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           persist-credentials: false
+          fetch-depth: 0
+      - name: Classify the complete push without skipping CI checks
+        id: changes
+        env:
+          BEFORE: ${{ github.event.before }}
+          AFTER: ${{ github.sha }}
+        run: echo "deploy_required=$(python3 scripts/deployment-required.py "$BEFORE" "$AFTER")" >> "$GITHUB_OUTPUT"
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
         with:
           bun-version: 1.4.2
       - run: bun install --frozen-lockfile
       - run: bun run check
       - run: bun test
-      - run: python3 -m unittest discover -s scripts -p 'test_hostinger.py' -v
+      - run: python3 -m unittest discover -s scripts -p 'test_*.py' -v
       - name: Validate the standalone provider manifest without resolving VPS secrets
         run: docker compose -f compose.hostinger.yaml config --no-interpolate --no-env-resolution --quiet
 
   release:
     needs: verify
-    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && vars.HOSTINGER_VM_ID != ''
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && vars.HOSTINGER_VM_ID != '' && needs.verify.outputs.deploy_required == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:

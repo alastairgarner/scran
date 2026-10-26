@@ -2,7 +2,8 @@
 
 Each agent works on its own branch in its own Git worktree. Each worktree gets
 an isolated Docker preview with synthetic data. Pushing `main` to GitHub
-**automatically deploys production** at https://recipes.alastair.sh through the
+**automatically deploys production** for deployment-relevant changes at
+https://recipes.alastair.sh through the
 [Hostinger workflow](hostinger.md). This is the current, configured deployment
 path; worktree previews remain isolated and unchanged.
 
@@ -105,7 +106,8 @@ bun test
 
 Validate the affected flow in the Docker preview and commit the worktree branch.
 GitHub Actions also runs these checks for pull requests and pushes to main.
-The Hostinger workflow is enabled: every push to `main` can replace production.
+The Hostinger workflow is enabled: deployment-relevant pushes to `main` can
+replace production. CI checks still run for every push.
 At this early stage, production breakage is an accepted development risk, not a
 reason to deploy a separate shared home-server instance.
 
@@ -135,6 +137,23 @@ production deployments; that does not coordinate local Git merges or pushes.
 
 Database migrations must have unique filenames and should remain compatible with
 the previous app version where possible.
+
+## Deployment path policy
+
+CI verification runs on every push/PR. Publishing images and deploying production
+are skipped only when **every changed path** is one of:
+
+- `docs/**`, `tasks/**`, `.vscode/**`, `.githooks/**`;
+- `AGENTS.md`, `CONTEXT.md`, `README.md`, `LICENSE`, `.env.template`;
+- `scripts/preview.sh`;
+- `compose.yaml`, `compose.vps.yaml`, `deploy/install-caddy.sh`,
+  `deploy/scran.caddy`, `deploy/public.Caddyfile.example`.
+
+The classifier in `scripts/deployment-required.py` checks the entire push, not
+just its final commit. Renames include both old and new paths. Mixed changes,
+unknown paths, unavailable history and manual deployment dispatches deploy
+normally. App code/tests, dependencies, build files, production manifests,
+workflow/verification scripts and check configuration are not excluded.
 
 ## Deploy merged changes
 

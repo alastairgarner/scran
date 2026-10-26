@@ -52,8 +52,10 @@ previews, seeded test accounts, validation, and automatic deployment on pushes t
 ## Production deployment
 
 Production is https://recipes.alastair.sh on Hostinger. **Push `main` to GitHub
-to deploy**: `.github/workflows/hostinger.yaml` validates, builds and deploys the
-release automatically. Verify that commit's **Verify and deploy to Hostinger**
+to deploy**: `.github/workflows/hostinger.yaml` validates every push, but skips
+image publishing/deployment for changes confined to known non-deployment paths
+(such as docs/tasks). Mixed or unknown paths deploy normally. See the development
+workflow for the exact policy. Verify that commit's **Verify and deploy to Hostinger**
 workflow succeeds; no local deployment command is needed.
 
 See [the Hostinger deployment guide](docs/hostinger.md) for configuration,

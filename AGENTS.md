@@ -14,7 +14,8 @@ Issues and specs live as Markdown under `tasks/<feature>/`. See `docs/agents/iss
 
 For parallel work, UI previews, and deployment after merging, follow
 [docs/development-workflow.md](docs/development-workflow.md). Use `bun run preview:up`
-for an isolated seeded UI. Pushing `main` to GitHub automatically deploys production
+for an isolated seeded UI. Pushing deployment-relevant changes to `main`
+automatically deploys production
 at https://recipes.alastair.sh through the Hostinger GitHub Actions workflow.
 Develop and test in parallel, but coordinate one agent at a time to merge locally,
 validate the combined result, push main, and verify the workflow succeeds.

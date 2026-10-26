@@ -2,7 +2,10 @@
 
 This is the current production deployment at https://recipes.alastair.sh.
 The workflow is configured and enabled: **push `main` to GitHub to deploy** and
-verify the matching Actions run succeeds. No local Docker deployment is needed.
+verify the matching Actions run succeeds. Known non-deployment-only pushes run
+checks but skip publishing/deployment; mixed and unknown paths deploy. See
+[the path policy](development-workflow.md#deployment-path-policy). No local
+Docker deployment is needed.
 
 `.github/workflows/hostinger.yaml` verifies PRs and main. Pushes to main build
 immutable app/proxy images in GitHub Container Registry
